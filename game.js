@@ -37,15 +37,17 @@ const ZONES = [
 ];
 
 const INNER_WALLS_INTERIOR = [
-  [1,5],[2,5],[3,5],[4,5],[6,5],[7,5],[8,5],[9,5],
-  [1,8],[2,8],[3,8],[4,8],[6,8],[7,8],[8,8],[9,8],
+  [1,5],[3,5],[4,5],[5,5],[6,5],[8,5],[9,5],
+  [1,8],[2,8],[3,8],[5,8],[7,8],[8,8],[9,8],
+  [5,6],[5,7],
+  [5,9],[5,10],[5,11],[5,12],
 ];
 const INNER_WALLS_EXTERIOR = [
   [1,13],[2,13],[3,13],[4,13],[6,13],[7,13],[8,13],[9,13],
 ];
 const INNER_WALLS = [...INNER_WALLS_INTERIOR, ...INNER_WALLS_EXTERIOR];
 
-const DOOR_TILES = [[5,5],[5,8]];
+const DOOR_TILES = [[2,5],[7,5],[4,8],[6,8]];
 const FRONT_DOOR = [5,13];
 
 const ITEMS = [
@@ -220,7 +222,7 @@ function defaultState(name) {
     money: 200,
     timeMin: 8 * 60,
     day: 1,
-    player: { x: 5, y: 7, sub: 0, dir: 'down', anim: 0 },
+    player: { x: 3, y: 3, sub: 0, dir: 'down', anim: 0 },
     path: [],
     action: null,
     placed: [],
@@ -263,8 +265,10 @@ function applyLoaded(s) {
   state.day = s.day ?? 1;
   state.placed = Array.isArray(s.placed) ? s.placed : [];
   if (s.player) {
-    state.player.x = s.player.x;
-    state.player.y = s.player.y;
+    if (isWalkable(s.player.x, s.player.y)) {
+      state.player.x = s.player.x;
+      state.player.y = s.player.y;
+    }
     state.player.dir = s.player.dir || 'down';
   }
 }
