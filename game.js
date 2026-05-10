@@ -92,6 +92,12 @@ const BUILD_CATALOG = [
   { id: 'rug', name: 'Tapis', icon: '🟫', price: 25, type: 'placedRug', w: 2, h: 1 },
   { id: 'cat_toy', name: 'Panier', icon: '🐈', price: 35, type: 'placedCatBed', w: 1, h: 1 },
   { id: 'guitar', name: 'Guitare', icon: '🎸', price: 80, type: 'placedGuitar', w: 1, h: 1 },
+  { id: 'vase', name: 'Vase', icon: '🌻', price: 18, type: 'placedVase', w: 1, h: 1 },
+  { id: 'pouf', name: 'Pouf', icon: '🛋', price: 30, type: 'placedPouf', w: 1, h: 1 },
+  { id: 'candle', name: 'Bougie', icon: '🕯', price: 12, type: 'placedCandle', w: 1, h: 1 },
+  { id: 'clock', name: 'Horloge', icon: '⏰', price: 22, type: 'placedClock', w: 1, h: 1 },
+  { id: 'aquarium', name: 'Aquarium', icon: '🐠', price: 90, type: 'placedAquarium', w: 1, h: 1 },
+  { id: 'easel', name: 'Chevalet', icon: '🎨', price: 45, type: 'placedEasel', w: 1, h: 1 },
 ];
 
 const APPEARANCE_PALETTES = {
@@ -283,6 +289,7 @@ let particleSystems = [];
 let composer, bloomPass, fxaaPass;
 let floorMesh;
 let blinkTimer = 0;
+const flickerMeshes = [];
 
 const canvasEl = document.getElementById('canvas');
 
@@ -779,6 +786,77 @@ function buildPlacedMesh(group, it) {
       add(new THREE.SphereGeometry(0.05, 10, 8), 0x1a1a1a, 0, 0.22, 0.03);
       break;
     }
+    case 'placedVase': {
+      add(new THREE.CylinderGeometry(0.1, 0.06, 0.4, 16), 0xc8a070, 0, 0.2, 0);
+      add(new THREE.CylinderGeometry(0.12, 0.1, 0.06, 16), 0xa07050, 0, 0.43, 0);
+      add(new THREE.SphereGeometry(0.05, 10, 8), 0xfdc848, 0, 0.55, 0, { emissive: 0xfdc848, emissiveIntensity: 0.2 });
+      add(new THREE.SphereGeometry(0.06, 10, 8), 0xfdc848, -0.06, 0.6, 0.04, { emissive: 0xfdc848, emissiveIntensity: 0.2 });
+      add(new THREE.SphereGeometry(0.05, 10, 8), 0xfdc848, 0.06, 0.58, -0.04, { emissive: 0xfdc848, emissiveIntensity: 0.2 });
+      add(new THREE.SphereGeometry(0.04, 10, 8), 0x4a8c5a, -0.08, 0.5, -0.05);
+      add(new THREE.SphereGeometry(0.04, 10, 8), 0x4a8c5a, 0.08, 0.5, 0.05);
+      break;
+    }
+    case 'placedPouf': {
+      add(new THREE.CylinderGeometry(0.32, 0.34, 0.34, 20), 0xe0a850, 0, 0.17, 0);
+      add(new THREE.CylinderGeometry(0.3, 0.3, 0.04, 20), 0xc88840, 0, 0.36, 0);
+      const stitch = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.012, 6, 24), lamMat(0xa07020));
+      stitch.position.y = 0.36; stitch.rotation.x = Math.PI / 2;
+      group.add(stitch);
+      break;
+    }
+    case 'placedCandle': {
+      add(new THREE.CylinderGeometry(0.1, 0.1, 0.04, 12), 0x6b4a30, 0, 0.02, 0);
+      add(new THREE.CylinderGeometry(0.06, 0.06, 0.18, 12), 0xfaf2dc, 0, 0.13, 0);
+      add(new THREE.CylinderGeometry(0.012, 0.005, 0.05, 6), 0xfdc848, 0, 0.245, 0, { emissive: 0xff8838, emissiveIntensity: 1.4 });
+      const light = new THREE.PointLight(0xff9560, 0.6, 1.6, 2);
+      light.position.y = 0.27; group.add(light);
+      lampLights.push({ light, bulb: null, baseColor: 0xff9560 });
+      break;
+    }
+    case 'placedClock': {
+      add(new THREE.CylinderGeometry(0.22, 0.22, 0.06, 24, 1, false), 0xf0e8d8, 0, 1.4, -0.43, { rot: [Math.PI / 2, 0, 0] });
+      add(new THREE.CylinderGeometry(0.2, 0.2, 0.06, 24, 1, false), 0xf8f0e0, 0, 1.4, -0.4, { rot: [Math.PI / 2, 0, 0] });
+      add(rb(0.02, 0.15, 0.005, 0.005), 0x1a1a1a, 0, 1.46, -0.39);
+      add(rb(0.02, 0.1, 0.005, 0.005), 0x1a1a1a, 0.05, 1.4, -0.39);
+      add(new THREE.SphereGeometry(0.018, 8, 6), 0x1a1a1a, 0, 1.4, -0.385);
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * Math.PI * 2;
+        const dot = new THREE.Mesh(new THREE.SphereGeometry(0.012, 6, 4), lamMat(0x1a1a1a));
+        dot.position.set(Math.cos(a) * 0.16, 1.4 + Math.sin(a) * 0.16, -0.385);
+        group.add(dot);
+      }
+      break;
+    }
+    case 'placedAquarium': {
+      add(rb(0.55, 0.18, 0.32, 0.02), 0x4a3520, 0, 0.09, 0);
+      const glassMat = lamMat(0x9bd5e0);
+      glassMat.transparent = true; glassMat.opacity = 0.55;
+      const tank = new THREE.Mesh(rb(0.55, 0.5, 0.32, 0.03), glassMat);
+      tank.position.y = 0.45; tank.castShadow = false;
+      group.add(tank);
+      add(new THREE.SphereGeometry(0.04, 10, 8), 0xfdc848, -0.12, 0.4, 0, { emissive: 0xfdc848, emissiveIntensity: 0.4 });
+      add(new THREE.SphereGeometry(0.035, 10, 8), 0xff7848, 0.1, 0.5, 0.05, { emissive: 0xff7848, emissiveIntensity: 0.4 });
+      add(new THREE.SphereGeometry(0.03, 10, 8), 0xfdc848, 0.05, 0.35, -0.04, { emissive: 0xfdc848, emissiveIntensity: 0.4 });
+      add(new THREE.PlaneGeometry(0.5, 0.06), 0x6b8b5b, 0, 0.23, 0, { rot: [-Math.PI / 2, 0, 0], cast: false });
+      add(rb(0.55, 0.05, 0.32, 0.01), 0x2a2a2a, 0, 0.72, 0);
+      const lightBulb = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 8), new THREE.MeshBasicMaterial({ color: 0x8be0ff }));
+      lightBulb.position.y = 0.69; group.add(lightBulb);
+      const fishLight = new THREE.PointLight(0x6bd0ff, 0.6, 1.8, 2);
+      fishLight.position.y = 0.5; group.add(fishLight);
+      lampLights.push({ light: fishLight, bulb: lightBulb, baseColor: 0x8be0ff });
+      break;
+    }
+    case 'placedEasel': {
+      add(rb(0.04, 1.4, 0.04, 0.01), 0x6b4a30, -0.18, 0.7, 0);
+      add(rb(0.04, 1.4, 0.04, 0.01), 0x6b4a30, 0.18, 0.7, 0);
+      add(rb(0.04, 1.5, 0.04, 0.01), 0x6b4a30, 0, 0.75, 0.18);
+      add(rb(0.5, 0.04, 0.04, 0.01), 0x6b4a30, 0, 0.5, 0);
+      add(rb(0.55, 0.45, 0.04, 0.02), 0xf0e8d8, 0, 0.85, 0.02);
+      add(rb(0.5, 0.4, 0.02, 0.005), 0xa8d4e0, 0, 0.85, 0.04);
+      add(rb(0.4, 0.04, 0.005, 0.005), 0x6f9b58, 0, 0.7, 0.05);
+      add(new THREE.SphereGeometry(0.03, 10, 8), 0xfdc848, 0.1, 0.95, 0.05);
+      break;
+    }
   }
 }
 
@@ -916,7 +994,8 @@ function buildItemMeshes(group, it) {
       add(new THREE.CylinderGeometry(0.11, 0.11, 0.025, 16), 0x1a1a1a, 0.2, 0.94, -0.1);
       add(new THREE.CylinderGeometry(0.09, 0.09, 0.025, 16), 0x1a1a1a, -0.2, 0.94, 0.1);
       add(new THREE.CylinderGeometry(0.09, 0.09, 0.025, 16), 0x1a1a1a, 0.2, 0.94, 0.1);
-      add(new THREE.CylinderGeometry(0.07, 0.07, 0.03, 8), 0xff6b35, -0.2, 0.96, -0.1, { emissive: 0xff8855, emissiveIntensity: 0.9 });
+      const burner = add(new THREE.CylinderGeometry(0.07, 0.07, 0.03, 8), 0xff6b35, -0.2, 0.96, -0.1, { emissive: 0xff8855, emissiveIntensity: 0.9 });
+      flickerMeshes.push({ mesh: burner, base: 0.9, type: 'fire' });
       for (let i = 0; i < 4; i++) {
         const k = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.04, 12), lamMat(0xc0c0c0));
         k.position.set(-0.3 + i * 0.2, 0.7, 0.275); k.rotation.x = Math.PI / 2; k.castShadow = true; group.add(k);
@@ -950,7 +1029,8 @@ function buildItemMeshes(group, it) {
       add(rb(0.92, 0.04, 0.52, 0.01), 0x6b4a30, 0, 0.52, 0);
       add(rb(0.85, 0.06, 0.45, 0.01), 0x2a2a2a, 0, 0.05, 0);
       add(rb(0.85, 0.55, 0.06, 0.02), 0x1a1a1a, 0, 0.95, -0.21);
-      add(rb(0.78, 0.46, 0.02, 0.005), 0x4ac0e8, 0, 0.95, -0.19, { emissive: 0x4ac0e8, emissiveIntensity: 0.7 });
+      const tvScreen = add(rb(0.78, 0.46, 0.02, 0.005), 0x4ac0e8, 0, 0.95, -0.19, { emissive: 0x4ac0e8, emissiveIntensity: 0.7 });
+      flickerMeshes.push({ mesh: tvScreen, base: 0.7, type: 'screen', baseColor: 0x4ac0e8 });
       add(rb(0.5, 0.06, 0.08, 0.01), 0x202020, 0, 0.6, -0.15);
       add(rb(0.04, 0.02, 0.08, 0.005), 0x202020, -0.32, 0.55, 0.05);
       add(rb(0.04, 0.04, 0.04, 0.005), 0xff4444, -0.32, 0.56, 0.07, { emissive: 0xff4444, emissiveIntensity: 0.4 });
@@ -1191,11 +1271,40 @@ function updatePlayerFacing(dir) {
 }
 
 function onPointerDown(e) {
-  if (state.action && !state.buildMode) return;
+  if (state.action && !state.buildMode && !state.demolishMode) return;
   const rect = canvasEl.getBoundingClientRect();
   pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
   pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
   raycaster.setFromCamera(pointer, camera);
+
+  if (state.demolishMode) {
+    const placedMeshes = itemMeshes.filter(m => m.userData?.placed);
+    const hits = raycaster.intersectObjects(placedMeshes, true);
+    if (hits.length > 0) {
+      let g = hits[0].object;
+      while (g && !g.userData?.item) g = g.parent;
+      if (g && g.userData.item.placed) {
+        const id = g.userData.item.id;
+        const item = state.placed.find(p => p.id === id);
+        if (item) {
+          const refund = Math.floor((BUILD_CATALOG.find(c => c.type === item.type)?.price || 0) * 0.5);
+          state.money += refund;
+          state.placed = state.placed.filter(p => p.id !== id);
+          for (let dy = 0; dy < item.h; dy++) {
+            for (let dx = 0; dx < item.w; dx++) {
+              if (item.y + dy < ROWS && item.x + dx < COLS) grid[item.y + dy][item.x + dx] = 0;
+            }
+          }
+          rebuildPlacedItems();
+          toast(`Démoli · +$${refund}`);
+          saveGame();
+        }
+      }
+    } else {
+      toast('Tap un objet placé.');
+    }
+    return;
+  }
 
   if (state.buildMode) {
     const planeY = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
@@ -1366,9 +1475,27 @@ function tick(dt) {
   }
 
   updateDayNight();
+  updateFlickers();
 
   saveAccum += dt;
   if (saveAccum > 8) { saveAccum = 0; saveGame(); }
+}
+
+function updateFlickers() {
+  const t = performance.now() / 1000;
+  for (const f of flickerMeshes) {
+    if (!f.mesh || !f.mesh.material) continue;
+    if (f.type === 'fire') {
+      const noise = Math.sin(t * 11) * 0.25 + Math.sin(t * 23.7) * 0.15 + Math.sin(t * 5.3) * 0.1;
+      f.mesh.material.emissiveIntensity = f.base + noise;
+    } else if (f.type === 'screen') {
+      const flick = (Math.sin(t * 7) > 0.5) ? 1 : 0.7;
+      f.mesh.material.emissiveIntensity = f.base * flick + 0.1;
+      const hue = 0.55 + Math.sin(t * 0.8) * 0.1;
+      f.mesh.material.color.setHSL(hue, 0.5, 0.55);
+      f.mesh.material.emissive.setHSL(hue, 0.5, 0.45);
+    }
+  }
 }
 
 function updateDayNight() {
@@ -1534,7 +1661,11 @@ function openBuildCatalog() {
   const m = document.getElementById('modal');
   document.getElementById('modal-title').textContent = '🔨 Catalogue';
   const body = document.getElementById('modal-body');
-  body.innerHTML = `<div style="font-size:12px;color:var(--ink-soft);margin-bottom:10px">Tap un objet pour le placer · Argent: <strong style="color:var(--accent)">$${Math.floor(state.money)}</strong></div><div class="catalog"></div>`;
+  body.innerHTML = `
+    <div style="font-size:12px;color:var(--ink-soft);margin-bottom:10px">Tap un objet pour le placer · Argent: <strong style="color:var(--accent)">$${Math.floor(state.money)}</strong></div>
+    <button id="demolish-btn" style="width:100%;padding:10px;border-radius:10px;background:var(--bad);color:#fff;font-weight:600;font-size:13px;margin-bottom:10px">🔥 Démolir (refund 50%)</button>
+    <div class="catalog"></div>
+  `;
   const cat = body.querySelector('.catalog');
   for (const it of BUILD_CATALOG) {
     const btn = document.createElement('button');
@@ -1545,6 +1676,7 @@ function openBuildCatalog() {
     btn.addEventListener('click', () => {
       if (state.money < it.price) { toast("Pas assez d'argent."); return; }
       state.buildMode = it;
+      state.demolishMode = false;
       m.hidden = true;
       const bar = document.getElementById('build-bar');
       bar.hidden = false;
@@ -1552,11 +1684,20 @@ function openBuildCatalog() {
     });
     cat.appendChild(btn);
   }
+  document.getElementById('demolish-btn').addEventListener('click', () => {
+    state.buildMode = null;
+    state.demolishMode = true;
+    m.hidden = true;
+    const bar = document.getElementById('build-bar');
+    bar.hidden = false;
+    document.getElementById('build-name').textContent = '🔥 Tap un objet à démolir';
+  });
   m.hidden = false;
 }
 
 document.getElementById('build-cancel').addEventListener('click', () => {
   state.buildMode = null;
+  state.demolishMode = false;
   document.getElementById('build-bar').hidden = true;
 });
 
