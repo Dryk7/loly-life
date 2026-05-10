@@ -226,7 +226,7 @@ function defaultState(name) {
     name: name || 'Toi',
     appearance: defaultAppearance(),
     needs: { hunger: 100, energy: 100, hygiene: 100, social: 100, fun: 100 },
-    money: 2000,
+    money: 2500,
     timeMin: 8 * 60,
     day: 1,
     player: { x: 3, y: 3, sub: 0, dir: 'down', anim: 0 },
@@ -269,7 +269,7 @@ function applyLoaded(s) {
   state = defaultState(s.name);
   state.appearance = { ...defaultAppearance(), ...(s.appearance || {}) };
   state.needs = { ...state.needs, ...s.needs };
-  state.money = s.money ?? 200;
+  state.money = s.money ?? 2500;
   state.timeMin = s.timeMin ?? 8 * 60;
   state.day = s.day ?? 1;
   state.placed = Array.isArray(s.placed) ? s.placed : [];
@@ -1729,6 +1729,9 @@ document.getElementById('cancel-action').addEventListener('click', () => {
 
 document.getElementById('menu-btn').addEventListener('click', openMenu);
 document.getElementById('modal-close').addEventListener('click', () => {
+  document.getElementById('modal').hidden = true;
+});
+document.getElementById('modal-x').addEventListener('click', () => {
   document.getElementById('modal').hidden = true;
 });
 

@@ -315,8 +315,24 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   padding: 22px;
   width: 100%;
   max-width: 340px;
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  position: relative;
   box-shadow: 0 20px 50px rgba(0,0,0,0.5);
 }
+#modal-x {
+  position: absolute;
+  top: 8px; right: 8px;
+  width: 32px; height: 32px;
+  border-radius: 16px;
+  background: var(--bg-soft);
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1;
+}
+#modal-x:active { transform: scale(0.92); }
 .modal-card h2 { font-size: 20px; margin-bottom: 14px; color: var(--accent); }
 #modal-body { font-size: 14px; line-height: 1.55; color: var(--ink-soft); }
 #modal-body .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
