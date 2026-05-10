@@ -309,7 +309,7 @@ function init3D() {
   const h = stage.clientHeight || 600;
 
   const aspect = w / h;
-  const d = 11;
+  const d = 8.5;
   camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 0.1, 100);
   positionCamera();
 
@@ -369,8 +369,8 @@ function init3D() {
 
 function positionCamera() {
   const cx = COLS / 2;
-  const cz = ROWS / 2;
-  camera.position.set(cx + 14, 18, cz + 14);
+  const cz = 8.5;
+  camera.position.set(cx + 12, 16, cz + 12);
   camera.lookAt(cx, 0.5, cz);
 }
 
@@ -1386,7 +1386,7 @@ function onResize() {
   const stage = document.getElementById('stage');
   const w = stage.clientWidth, h = stage.clientHeight;
   const aspect = w / h;
-  const d = 11;
+  const d = 8.5;
   camera.left = -d * aspect;
   camera.right = d * aspect;
   camera.top = d;
