@@ -3284,13 +3284,10 @@ function playSfx(type) {
   }
 }
 
-function buildPlayer() {
-  if (playerGroup) {
-    scene.remove(playerGroup);
-    playerGroup.traverse(o => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
-  }
-  playerGroup = new THREE.Group();
-  const app = state.appearance;
+function createCharacterMesh(app) {
+  const group = new THREE.Group();
+  let head = null, hair = null, armL = null, armR = null;
+  let legL = null, legR = null, eyeL = null, eyeR = null;
 
   const skin = new THREE.Color(app.skin);
   const hairC = new THREE.Color(app.hair);
@@ -3310,113 +3307,113 @@ function buildPlayer() {
     dress.position.y = 0.88;
     dress.castShadow = true;
     dress.receiveShadow = true;
-    playerGroup.add(dress);
+    group.add(dress);
     const skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.42, 0.5, 16), shirtMat);
     skirt.position.y = 0.34;
     skirt.castShadow = true;
     skirt.receiveShadow = true;
-    playerGroup.add(skirt);
+    group.add(skirt);
   } else {
     const torso = new THREE.Mesh(rb(torsoW, 0.5, 0.24, 0.05), shirtMat);
     torso.position.y = 0.88;
     torso.castShadow = true;
     torso.receiveShadow = true;
-    playerGroup.add(torso);
+    group.add(torso);
 
     if (app.top === 'tank') {
       const sk = new THREE.Mesh(rb(torsoW + 0.005, 0.18, 0.245, 0.04), skinMat);
       sk.position.y = 1.05;
       sk.castShadow = true;
-      playerGroup.add(sk);
+      group.add(sk);
     }
 
     if (app.bottom === 'pants') {
       const legGeom = rb(0.14, 0.5, 0.17, 0.04);
       legGeom.translate(0, -0.25, 0);
-      playerLegL = new THREE.Mesh(legGeom, pantsMat);
-      playerLegL.position.set(-0.08, 0.6, 0);
-      playerLegL.castShadow = true;
-      playerGroup.add(playerLegL);
-      playerLegR = new THREE.Mesh(legGeom, pantsMat);
-      playerLegR.position.set(0.08, 0.6, 0);
-      playerLegR.castShadow = true;
-      playerGroup.add(playerLegR);
+      legL = new THREE.Mesh(legGeom, pantsMat);
+      legL.position.set(-0.08, 0.6, 0);
+      legL.castShadow = true;
+      group.add(legL);
+      legR = new THREE.Mesh(legGeom, pantsMat);
+      legR.position.set(0.08, 0.6, 0);
+      legR.castShadow = true;
+      group.add(legR);
     } else if (app.bottom === 'short') {
       const sLegGeom = rb(0.14, 0.22, 0.17, 0.04);
       sLegGeom.translate(0, -0.11, 0);
-      playerLegL = new THREE.Mesh(sLegGeom, pantsMat);
-      playerLegL.position.set(-0.08, 0.6, 0);
-      playerLegL.castShadow = true;
-      playerGroup.add(playerLegL);
+      legL = new THREE.Mesh(sLegGeom, pantsMat);
+      legL.position.set(-0.08, 0.6, 0);
+      legL.castShadow = true;
+      group.add(legL);
       const skLegGeom = rb(0.13, 0.3, 0.16, 0.04);
       skLegGeom.translate(0, -0.15, 0);
       const skinLegL = new THREE.Mesh(skLegGeom, skinMat);
       skinLegL.position.set(-0.08, 0.38, 0);
       skinLegL.castShadow = true;
-      playerLegL.userData.skinPart = skinLegL;
-      playerGroup.add(skinLegL);
-      playerLegR = new THREE.Mesh(sLegGeom, pantsMat);
-      playerLegR.position.set(0.08, 0.6, 0);
-      playerLegR.castShadow = true;
-      playerGroup.add(playerLegR);
+      legL.userData.skinPart = skinLegL;
+      group.add(skinLegL);
+      legR = new THREE.Mesh(sLegGeom, pantsMat);
+      legR.position.set(0.08, 0.6, 0);
+      legR.castShadow = true;
+      group.add(legR);
       const skinLegR = new THREE.Mesh(skLegGeom, skinMat);
       skinLegR.position.set(0.08, 0.38, 0);
       skinLegR.castShadow = true;
-      playerLegR.userData.skinPart = skinLegR;
-      playerGroup.add(skinLegR);
+      legR.userData.skinPart = skinLegR;
+      group.add(skinLegR);
     } else if (app.bottom === 'skirt') {
       const skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.34, 0.32, 16), pantsMat);
       skirt.position.y = 0.46;
       skirt.castShadow = true;
-      playerGroup.add(skirt);
+      group.add(skirt);
       const skLegGeom = rb(0.11, 0.28, 0.11, 0.04);
       skLegGeom.translate(0, -0.14, 0);
-      playerLegL = new THREE.Mesh(skLegGeom, skinMat);
-      playerLegL.position.set(-0.08, 0.3, 0);
-      playerLegL.castShadow = true;
-      playerGroup.add(playerLegL);
-      playerLegR = new THREE.Mesh(skLegGeom, skinMat);
-      playerLegR.position.set(0.08, 0.3, 0);
-      playerLegR.castShadow = true;
-      playerGroup.add(playerLegR);
+      legL = new THREE.Mesh(skLegGeom, skinMat);
+      legL.position.set(-0.08, 0.3, 0);
+      legL.castShadow = true;
+      group.add(legL);
+      legR = new THREE.Mesh(skLegGeom, skinMat);
+      legR.position.set(0.08, 0.3, 0);
+      legR.castShadow = true;
+      group.add(legR);
     }
   }
 
   const armMat = (app.top === 'pull') ? shirtMat : skinMat;
   const armGeom = rb(0.11, 0.45, 0.11, 0.04);
   armGeom.translate(0, -0.22, 0);
-  playerArmL = new THREE.Mesh(armGeom, armMat);
-  playerArmL.position.set(-(torsoW / 2 + 0.06), 1.1, 0);
-  playerArmL.castShadow = true;
-  playerGroup.add(playerArmL);
-  playerArmR = new THREE.Mesh(armGeom, armMat);
-  playerArmR.position.set(torsoW / 2 + 0.06, 1.1, 0);
-  playerArmR.castShadow = true;
-  playerGroup.add(playerArmR);
+  armL = new THREE.Mesh(armGeom, armMat);
+  armL.position.set(-(torsoW / 2 + 0.06), 1.1, 0);
+  armL.castShadow = true;
+  group.add(armL);
+  armR = new THREE.Mesh(armGeom, armMat);
+  armR.position.set(torsoW / 2 + 0.06, 1.1, 0);
+  armR.castShadow = true;
+  group.add(armR);
 
   if (app.top !== 'pull' && app.top !== 'tank') {
     const sleeveL = new THREE.Mesh(rb(0.14, 0.11, 0.14, 0.04), shirtMat);
     sleeveL.position.set(-(torsoW / 2 + 0.06), 1.07, 0);
     sleeveL.castShadow = true;
-    playerGroup.add(sleeveL);
+    group.add(sleeveL);
     const sleeveR = new THREE.Mesh(rb(0.14, 0.11, 0.14, 0.04), shirtMat);
     sleeveR.position.set(torsoW / 2 + 0.06, 1.07, 0);
     sleeveR.castShadow = true;
-    playerGroup.add(sleeveR);
+    group.add(sleeveR);
   }
 
   const handGeom = new THREE.SphereGeometry(0.06, 12, 8);
   const handL = new THREE.Mesh(handGeom, skinMat);
   handL.position.set(0, -0.45, 0);
-  playerArmL.add(handL);
+  armL.add(handL);
   const handR = new THREE.Mesh(handGeom, skinMat);
   handR.position.set(0, -0.45, 0);
-  playerArmR.add(handR);
+  armR.add(handR);
 
-  playerHead = new THREE.Mesh(new THREE.SphereGeometry(0.18, 14, 12), skinMat);
-  playerHead.position.y = 1.32;
-  playerHead.castShadow = true;
-  playerGroup.add(playerHead);
+  head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 14, 12), skinMat);
+  head.position.y = 1.32;
+  head.castShadow = true;
+  group.add(head);
 
   if (app.hairStyle !== 'bald') {
     const hairGroup = new THREE.Group();
@@ -3459,41 +3456,41 @@ function buildPlayer() {
         hairGroup.add(curl);
       }
     }
-    playerHair = hairGroup;
-    playerGroup.add(hairGroup);
+    hair = hairGroup;
+    group.add(hairGroup);
   }
 
   const earGeom = new THREE.SphereGeometry(0.035, 8, 6);
   const earL = new THREE.Mesh(earGeom, skinMat);
   earL.position.set(-0.18, 1.3, 0);
   earL.castShadow = true;
-  playerGroup.add(earL);
+  group.add(earL);
   const earR = new THREE.Mesh(earGeom, skinMat);
   earR.position.set(0.18, 1.3, 0);
   earR.castShadow = true;
-  playerGroup.add(earR);
+  group.add(earR);
 
   const noseGeom = new THREE.SphereGeometry(0.022, 8, 6);
   const nose = new THREE.Mesh(noseGeom, skinMat);
   nose.position.set(0, 1.3, -0.18);
   nose.scale.set(0.9, 1.1, 1);
-  playerGroup.add(nose);
+  group.add(nose);
 
   const eyeGeom = new THREE.SphereGeometry(0.028, 10, 8);
   const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   const eyeIrisMat = new THREE.MeshBasicMaterial({ color: app.eyeColor || 0x3a4a6a });
   const eyeWhiteL = new THREE.Mesh(eyeGeom, eyeWhiteMat);
   eyeWhiteL.position.set(-0.06, 1.36, -0.16); eyeWhiteL.scale.set(1, 1, 0.3);
-  playerGroup.add(eyeWhiteL);
+  group.add(eyeWhiteL);
   const eyeWhiteR = new THREE.Mesh(eyeGeom, eyeWhiteMat);
   eyeWhiteR.position.set(0.06, 1.36, -0.16); eyeWhiteR.scale.set(1, 1, 0.3);
-  playerGroup.add(eyeWhiteR);
-  playerEyeL = new THREE.Mesh(new THREE.SphereGeometry(0.018, 10, 8), eyeIrisMat);
-  playerEyeL.position.set(-0.06, 1.36, -0.175); playerEyeL.scale.set(1, 1, 0.3);
-  playerGroup.add(playerEyeL);
-  playerEyeR = new THREE.Mesh(new THREE.SphereGeometry(0.018, 10, 8), eyeIrisMat);
-  playerEyeR.position.set(0.06, 1.36, -0.175); playerEyeR.scale.set(1, 1, 0.3);
-  playerGroup.add(playerEyeR);
+  group.add(eyeWhiteR);
+  eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.018, 10, 8), eyeIrisMat);
+  eyeL.position.set(-0.06, 1.36, -0.175); eyeL.scale.set(1, 1, 0.3);
+  group.add(eyeL);
+  eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.018, 10, 8), eyeIrisMat);
+  eyeR.position.set(0.06, 1.36, -0.175); eyeR.scale.set(1, 1, 0.3);
+  group.add(eyeR);
 
   const browMat = new THREE.MeshLambertMaterial({ color: app.hair || 0x5c3d1e });
   const browStyle = app.eyebrow || 'normal';
@@ -3502,40 +3499,40 @@ function buildPlayer() {
   const browL = new THREE.Mesh(rb(browW, browH, 0.01, 0.003), browMat);
   browL.position.set(-0.06, 1.42, -0.18);
   if (browStyle === 'arched') browL.rotation.z = -0.25;
-  playerGroup.add(browL);
+  group.add(browL);
   const browR = new THREE.Mesh(rb(browW, browH, 0.01, 0.003), browMat);
   browR.position.set(0.06, 1.42, -0.18);
   if (browStyle === 'arched') browR.rotation.z = 0.25;
-  playerGroup.add(browR);
+  group.add(browR);
 
   if (app.gender === 'f') {
     const blushMat = new THREE.MeshBasicMaterial({ color: 0xf48a8a, transparent: true, opacity: 0.55 });
     const blushL = new THREE.Mesh(new THREE.SphereGeometry(0.04, 10, 8), blushMat);
     blushL.position.set(-0.13, 1.31, -0.14); blushL.scale.set(1, 0.5, 0.4);
-    playerGroup.add(blushL);
+    group.add(blushL);
     const blushR = new THREE.Mesh(new THREE.SphereGeometry(0.04, 10, 8), blushMat);
     blushR.position.set(0.13, 1.31, -0.14); blushR.scale.set(1, 0.5, 0.4);
-    playerGroup.add(blushR);
+    group.add(blushR);
   }
 
   const mouthMat = new THREE.MeshBasicMaterial({ color: 0xc06868 });
   const mouth = new THREE.Mesh(rb(0.05, 0.012, 0.005, 0.002), mouthMat);
   mouth.position.set(0, 1.27, -0.17);
-  playerGroup.add(mouth);
+  group.add(mouth);
 
   if (app.facialHair && app.facialHair !== 'none') {
     const fhMat = new THREE.MeshLambertMaterial({ color: app.hair || 0x5c3d1e });
     if (app.facialHair === 'mustache') {
       const m = new THREE.Mesh(rb(0.1, 0.025, 0.02, 0.005), fhMat);
-      m.position.set(0, 1.3, -0.17); playerGroup.add(m);
+      m.position.set(0, 1.3, -0.17); group.add(m);
     } else if (app.facialHair === 'goatee') {
       const m = new THREE.Mesh(rb(0.06, 0.05, 0.02, 0.01), fhMat);
-      m.position.set(0, 1.22, -0.17); playerGroup.add(m);
+      m.position.set(0, 1.22, -0.17); group.add(m);
     } else if (app.facialHair === 'beard') {
       const m1 = new THREE.Mesh(rb(0.18, 0.1, 0.03, 0.02), fhMat);
-      m1.position.set(0, 1.23, -0.16); playerGroup.add(m1);
+      m1.position.set(0, 1.23, -0.16); group.add(m1);
       const m2 = new THREE.Mesh(rb(0.1, 0.025, 0.02, 0.005), fhMat);
-      m2.position.set(0, 1.3, -0.17); playerGroup.add(m2);
+      m2.position.set(0, 1.3, -0.17); group.add(m2);
     }
   }
 
@@ -3545,51 +3542,51 @@ function buildPlayer() {
     const isRound = app.glasses === 'round';
     if (isRound) {
       const lensL = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.008, 6, 16), frameMat);
-      lensL.position.set(-0.06, 1.36, -0.19); playerGroup.add(lensL);
+      lensL.position.set(-0.06, 1.36, -0.19); group.add(lensL);
       const lensR = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.008, 6, 16), frameMat);
-      lensR.position.set(0.06, 1.36, -0.19); playerGroup.add(lensR);
+      lensR.position.set(0.06, 1.36, -0.19); group.add(lensR);
       const innerL = new THREE.Mesh(new THREE.CircleGeometry(0.04, 16), lensMat);
-      innerL.position.set(-0.06, 1.36, -0.188); playerGroup.add(innerL);
+      innerL.position.set(-0.06, 1.36, -0.188); group.add(innerL);
       const innerR = new THREE.Mesh(new THREE.CircleGeometry(0.04, 16), lensMat);
-      innerR.position.set(0.06, 1.36, -0.188); playerGroup.add(innerR);
+      innerR.position.set(0.06, 1.36, -0.188); group.add(innerR);
     } else {
       const lensL = new THREE.Mesh(rb(0.09, 0.06, 0.005, 0.01), frameMat);
-      lensL.position.set(-0.06, 1.36, -0.19); playerGroup.add(lensL);
+      lensL.position.set(-0.06, 1.36, -0.19); group.add(lensL);
       const lensR = new THREE.Mesh(rb(0.09, 0.06, 0.005, 0.01), frameMat);
-      lensR.position.set(0.06, 1.36, -0.19); playerGroup.add(lensR);
+      lensR.position.set(0.06, 1.36, -0.19); group.add(lensR);
       const innerL = new THREE.Mesh(new THREE.PlaneGeometry(0.08, 0.05), lensMat);
-      innerL.position.set(-0.06, 1.36, -0.188); playerGroup.add(innerL);
+      innerL.position.set(-0.06, 1.36, -0.188); group.add(innerL);
       const innerR = new THREE.Mesh(new THREE.PlaneGeometry(0.08, 0.05), lensMat);
-      innerR.position.set(0.06, 1.36, -0.188); playerGroup.add(innerR);
+      innerR.position.set(0.06, 1.36, -0.188); group.add(innerR);
     }
     const bridge = new THREE.Mesh(rb(0.04, 0.008, 0.005, 0.002), frameMat);
-    bridge.position.set(0, 1.36, -0.19); playerGroup.add(bridge);
+    bridge.position.set(0, 1.36, -0.19); group.add(bridge);
   }
 
   if (app.hat && app.hat !== 'none') {
     const hatMat = new THREE.MeshLambertMaterial({ color: 0x2a2a2a });
     if (app.hat === 'cap') {
       const crown = new THREE.Mesh(new THREE.SphereGeometry(0.21, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.45), hatMat);
-      crown.position.y = 1.5; playerGroup.add(crown);
+      crown.position.y = 1.5; group.add(crown);
       const visor = new THREE.Mesh(rb(0.34, 0.04, 0.18, 0.02), hatMat);
-      visor.position.set(0, 1.42, -0.18); playerGroup.add(visor);
+      visor.position.set(0, 1.42, -0.18); group.add(visor);
     } else if (app.hat === 'beanie') {
       const beanie = new THREE.Mesh(new THREE.SphereGeometry(0.23, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), new THREE.MeshLambertMaterial({ color: 0x6b4a8a }));
-      beanie.position.y = 1.45; playerGroup.add(beanie);
+      beanie.position.y = 1.45; group.add(beanie);
       const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.08, 16), new THREE.MeshLambertMaterial({ color: 0x5a3a78 }));
-      cuff.position.y = 1.36; playerGroup.add(cuff);
+      cuff.position.y = 1.36; group.add(cuff);
     } else if (app.hat === 'beret') {
       const beret = new THREE.Mesh(new THREE.SphereGeometry(0.26, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.35), new THREE.MeshLambertMaterial({ color: 0xa85b5b }));
-      beret.position.y = 1.45; beret.scale.y = 0.6; playerGroup.add(beret);
+      beret.position.y = 1.45; beret.scale.y = 0.6; group.add(beret);
       const stem = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), new THREE.MeshLambertMaterial({ color: 0xa85b5b }));
-      stem.position.set(0.08, 1.55, -0.05); playerGroup.add(stem);
+      stem.position.set(0.08, 1.55, -0.05); group.add(stem);
     } else if (app.hat === 'fedora') {
       const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.2, 0.18, 16), new THREE.MeshLambertMaterial({ color: 0x4a3520 }));
-      crown.position.y = 1.55; playerGroup.add(crown);
+      crown.position.y = 1.55; group.add(crown);
       const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.04, 20), new THREE.MeshLambertMaterial({ color: 0x4a3520 }));
-      brim.position.y = 1.46; playerGroup.add(brim);
+      brim.position.y = 1.46; group.add(brim);
       const band = new THREE.Mesh(new THREE.CylinderGeometry(0.181, 0.201, 0.04, 16), new THREE.MeshLambertMaterial({ color: 0x1a1a1a }));
-      band.position.y = 1.48; playerGroup.add(band);
+      band.position.y = 1.48; group.add(band);
     }
   }
 
@@ -3597,14 +3594,14 @@ function buildPlayer() {
     const earringMat = new THREE.MeshLambertMaterial({ color: 0xd4a857, metalness: 0.5 });
     if (app.earring === 'stud') {
       const stL = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 6), earringMat);
-      stL.position.set(-0.2, 1.27, 0); playerGroup.add(stL);
+      stL.position.set(-0.2, 1.27, 0); group.add(stL);
       const stR = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 6), earringMat);
-      stR.position.set(0.2, 1.27, 0); playerGroup.add(stR);
+      stR.position.set(0.2, 1.27, 0); group.add(stR);
     } else {
       const hpL = new THREE.Mesh(new THREE.TorusGeometry(0.025, 0.005, 6, 12), earringMat);
-      hpL.position.set(-0.2, 1.24, 0); hpL.rotation.y = Math.PI / 2; playerGroup.add(hpL);
+      hpL.position.set(-0.2, 1.24, 0); hpL.rotation.y = Math.PI / 2; group.add(hpL);
       const hpR = new THREE.Mesh(new THREE.TorusGeometry(0.025, 0.005, 6, 12), earringMat);
-      hpR.position.set(0.2, 1.24, 0); hpR.rotation.y = Math.PI / 2; playerGroup.add(hpR);
+      hpR.position.set(0.2, 1.24, 0); hpR.rotation.y = Math.PI / 2; group.add(hpR);
     }
   }
 
@@ -3614,15 +3611,33 @@ function buildPlayer() {
   const shoeH = sStyle === 'sandals' ? 0.04 : sStyle === 'boots' ? 0.18 : 0.08;
   const shoeL = new THREE.Mesh(rb(0.14, shoeH, 0.2, 0.03), shoeMat);
   shoeL.position.set(-0.08, shoeY + shoeH / 2, 0.02); shoeL.castShadow = true;
-  playerGroup.add(shoeL);
+  group.add(shoeL);
   const shoeR = new THREE.Mesh(rb(0.14, shoeH, 0.2, 0.03), shoeMat);
   shoeR.position.set(0.08, shoeY + shoeH / 2, 0.02); shoeR.castShadow = true;
-  playerGroup.add(shoeR);
+  group.add(shoeR);
 
   const heightScale = app.bodyHeight === 'tall' ? 1.1 : app.bodyHeight === 'short' ? 0.88 : 1.0;
   const widthScale = app.bodyShape === 'athletic' ? 1.15 : app.bodyShape === 'curvy' ? 1.2 : app.bodyShape === 'slim' ? 0.88 : 1.0;
-  playerGroup.scale.set(widthScale, heightScale, widthScale);
+  group.scale.set(widthScale, heightScale, widthScale);
 
+  return { group, head, hair, armL, armR, legL, legR, eyeL, eyeR };
+}
+
+function buildPlayer() {
+  if (playerGroup) {
+    scene.remove(playerGroup);
+    playerGroup.traverse(o => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
+  }
+  const built = createCharacterMesh(state.appearance);
+  playerGroup = built.group;
+  playerHead = built.head;
+  playerHair = built.hair;
+  playerArmL = built.armL;
+  playerArmR = built.armR;
+  playerLegL = built.legL;
+  playerLegR = built.legR;
+  playerEyeL = built.eyeL;
+  playerEyeR = built.eyeR;
   playerGroup.position.set(state.player.x + 0.5, 0, state.player.y + 0.5);
   playerGroup.rotation.y = Math.PI;
   scene.add(playerGroup);
@@ -4284,135 +4299,6 @@ function openMenu() {
   m.hidden = false;
 }
 
-function drawCharacter2D(c, app, dir, moving, anim) {
-  const skin = app.skin || '#fbc8a8';
-  const hair = app.hair || '#5c3d1e';
-  const shirt = app.shirt || '#5b8aaf';
-  const pants = app.pants || '#3c4a5c';
-  const eyeColor = app.eyeColor || '#1a1a1a';
-  const style = app.hairStyle || 'short';
-  const gender = app.gender || 'f';
-  const top = app.top || 'tshirt';
-  const bottom = app.bottom || 'pants';
-  const browStyle = app.eyebrow || 'normal';
-  const fh = app.facialHair || 'none';
-  const glasses = app.glasses || 'none';
-  const hat = app.hat || 'none';
-  const earring = app.earring || 'none';
-  const heightScale = app.bodyHeight === 'tall' ? 1.1 : app.bodyHeight === 'short' ? 0.88 : 1.0;
-  const widthScale = app.bodyShape === 'athletic' ? 1.15 : app.bodyShape === 'curvy' ? 1.2 : app.bodyShape === 'slim' ? 0.88 : 1.0;
-  c.save();
-  c.scale(widthScale, heightScale);
-  c.fillStyle = 'rgba(0,0,0,0.18)';
-  c.beginPath(); c.ellipse(0, 0, 9, 3, 0, 0, Math.PI * 2); c.fill();
-  const by = -14;
-  const torsoW = gender === 'f' ? 10 : 12;
-  const torsoX = -torsoW / 2;
-  const armX = gender === 'f' ? -6 : -7;
-  const armX2 = gender === 'f' ? 4 : 5;
-  if (top !== 'robe') {
-    if (bottom === 'pants') {
-      c.fillStyle = pants; c.fillRect(-5, by + 8, 4, 8); c.fillRect(1, by + 8, 4, 8);
-    } else if (bottom === 'short') {
-      c.fillStyle = pants; c.fillRect(-5, by + 8, 4, 4); c.fillRect(1, by + 8, 4, 4);
-      c.fillStyle = skin; c.fillRect(-5, by + 12, 4, 4); c.fillRect(1, by + 12, 4, 4);
-    } else if (bottom === 'skirt') {
-      c.fillStyle = pants;
-      c.fillRect(-5, by + 8, 10, 2); c.fillRect(-6, by + 10, 12, 2); c.fillRect(-7, by + 12, 14, 2);
-      c.fillStyle = skin; c.fillRect(-4, by + 14, 3, 2); c.fillRect(1, by + 14, 3, 2);
-    }
-  }
-  if (top === 'robe') {
-    c.fillStyle = shirt;
-    c.fillRect(torsoX, by + 2, torsoW, 8);
-    c.fillRect(-6, by + 10, 12, 4); c.fillRect(-7, by + 14, 14, 2);
-  } else if (top === 'tank') {
-    c.fillStyle = skin; c.fillRect(torsoX, by + 2, torsoW, 2);
-    c.fillStyle = shirt; c.fillRect(torsoX + 1, by + 4, torsoW - 2, 6);
-  } else {
-    c.fillStyle = shirt; c.fillRect(torsoX, by + 2, torsoW, 8);
-  }
-  if (top === 'pull') {
-    c.fillStyle = shirt; c.fillRect(armX, by + 4, 2, 4); c.fillRect(armX2, by + 4, 2, 4);
-  } else if (top === 'tank') {
-    c.fillStyle = skin; c.fillRect(armX, by + 3, 2, 5); c.fillRect(armX2, by + 3, 2, 5);
-  } else {
-    c.fillStyle = shirt; c.fillRect(armX, by + 4, 2, 1); c.fillRect(armX2, by + 4, 2, 1);
-    c.fillStyle = skin; c.fillRect(armX, by + 5, 2, 3); c.fillRect(armX2, by + 5, 2, 3);
-  }
-  c.fillStyle = skin; c.fillRect(-5, by - 8, 10, 10);
-  if (style !== 'bald') {
-    c.fillStyle = hair;
-    c.fillRect(-6, by - 9, 12, 5);
-    c.fillRect(-6, by - 4, 2, 4); c.fillRect(4, by - 4, 2, 4);
-    if (style === 'long') {
-      c.fillRect(-6, by, 2, 5); c.fillRect(4, by, 2, 5); c.fillRect(-5, by + 2, 10, 4);
-    } else if (style === 'tuft') {
-      c.fillRect(-2, by - 12, 4, 3); c.fillRect(-1, by - 14, 2, 2);
-    }
-  }
-  c.fillStyle = '#ffffff';
-  c.fillRect(-3, by - 4, 2, 2); c.fillRect(2, by - 4, 2, 2);
-  c.fillStyle = eyeColor;
-  c.fillRect(-3, by - 4, 1, 1); c.fillRect(2, by - 4, 1, 1);
-  if (browStyle !== 'none') {
-    c.fillStyle = hair;
-    const browW = browStyle === 'thick' ? 4 : browStyle === 'thin' ? 2 : 3;
-    c.fillRect(-3, by - 6, browW, 1);
-    c.fillRect(2, by - 6, browW, 1);
-  }
-  if (fh === 'mustache' || fh === 'beard') {
-    c.fillStyle = hair;
-    c.fillRect(-2, by - 1, 4, 1);
-  }
-  if (fh === 'goatee' || fh === 'beard') {
-    c.fillStyle = hair;
-    c.fillRect(-1, by + 1, 2, 1);
-  }
-  if (fh === 'beard') {
-    c.fillStyle = hair;
-    c.fillRect(-3, by, 6, 1);
-  }
-  c.fillStyle = '#d88a8a'; c.fillRect(-1, by - 1, 2, 1);
-  if (glasses !== 'none') {
-    c.fillStyle = glasses === 'sun' ? '#1a1a1a' : '#3a3a3a';
-    c.fillRect(-4, by - 5, 3, 3);
-    c.fillRect(1, by - 5, 3, 3);
-    c.fillRect(-2, by - 4, 3, 1);
-    if (glasses !== 'sun') {
-      c.fillStyle = 'rgba(106,176,216,0.5)';
-      c.fillRect(-3, by - 4, 1, 1);
-      c.fillRect(2, by - 4, 1, 1);
-    }
-  }
-  if (earring !== 'none') {
-    c.fillStyle = '#d4a857';
-    c.fillRect(-6, by - 1, 1, 1);
-    c.fillRect(5, by - 1, 1, 1);
-  }
-  if (hat === 'cap') {
-    c.fillStyle = '#2a2a2a';
-    c.fillRect(-6, by - 11, 12, 4);
-    c.fillRect(-7, by - 7, 8, 1);
-  } else if (hat === 'beanie') {
-    c.fillStyle = '#6b4a8a';
-    c.fillRect(-6, by - 12, 12, 5);
-    c.fillStyle = '#5a3a78';
-    c.fillRect(-6, by - 7, 12, 1);
-  } else if (hat === 'beret') {
-    c.fillStyle = '#a85b5b';
-    c.fillRect(-7, by - 11, 14, 4);
-    c.fillRect(4, by - 13, 2, 2);
-  } else if (hat === 'fedora') {
-    c.fillStyle = '#4a3520';
-    c.fillRect(-5, by - 13, 10, 5);
-    c.fillRect(-8, by - 8, 16, 2);
-    c.fillStyle = '#1a1a1a';
-    c.fillRect(-5, by - 9, 10, 1);
-  }
-  c.restore();
-}
-
 const bootEl = document.getElementById('boot');
 const gameEl = document.getElementById('game');
 const nameInput = document.getElementById('name-input');
@@ -4427,7 +4313,7 @@ if (saved && saved.name) {
 
 buildPickers();
 buildTraitsPicker();
-drawPreview();
+initCharacterPreview();
 
 function buildTraitsPicker() {
   const container = document.getElementById('traits-picker');
@@ -4492,7 +4378,7 @@ function buildPickers() {
 function selectAppearance(key, value) {
   pendingAppearance[key] = value;
   refreshPickers();
-  drawPreview();
+  refreshCharacterPreview();
 }
 
 function refreshPickers() {
@@ -4505,23 +4391,250 @@ function refreshPickers() {
   }
 }
 
-function drawPreview() {
-  const c = document.getElementById('preview-canvas');
-  if (!c) return;
-  const cx = c.getContext('2d');
-  cx.imageSmoothingEnabled = false;
-  cx.clearRect(0, 0, c.width, c.height);
-  const grad = cx.createLinearGradient(0, 0, 0, c.height);
-  grad.addColorStop(0, '#5b4a78');
-  grad.addColorStop(1, '#3a2d52');
-  cx.fillStyle = grad; cx.fillRect(0, 0, c.width, c.height);
-  cx.fillStyle = 'rgba(255,236,217,0.12)';
-  cx.fillRect(0, c.height - 16, c.width, 16);
-  cx.save();
-  cx.translate(c.width / 2, c.height - 14);
-  cx.scale(3, 3);
-  drawCharacter2D(cx, pendingAppearance, 'down', false, 0);
-  cx.restore();
+let previewState = null;
+
+function initCharacterPreview() {
+  if (previewState) { refreshCharacterPreview(); return; }
+  const canvas = document.getElementById('preview-canvas');
+  if (!canvas) return;
+
+  // Drop legacy width/height attributes to let CSS drive size
+  canvas.removeAttribute('width');
+  canvas.removeAttribute('height');
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.15;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+  const scene = new THREE.Scene();
+
+  // Soft purple/violet ambient
+  const hemi = new THREE.HemisphereLight(0xffd0a0, 0x2a1d44, 0.55);
+  scene.add(hemi);
+
+  // Warm key light from upper-front-right
+  const key = new THREE.DirectionalLight(0xffe5c0, 1.7);
+  key.position.set(2.2, 3.5, 2.8);
+  key.castShadow = true;
+  key.shadow.camera.left = -1.4; key.shadow.camera.right = 1.4;
+  key.shadow.camera.top = 2.2; key.shadow.camera.bottom = -0.5;
+  key.shadow.camera.near = 0.5; key.shadow.camera.far = 12;
+  key.shadow.mapSize.set(1024, 1024);
+  key.shadow.bias = -0.0008;
+  scene.add(key);
+
+  // Cool magenta fill from the left
+  const fill = new THREE.DirectionalLight(0xc89aff, 0.45);
+  fill.position.set(-3, 1.8, 0.5);
+  scene.add(fill);
+
+  // Gold rim light from behind
+  const rim = new THREE.DirectionalLight(0xffd089, 0.85);
+  rim.position.set(-0.5, 2.4, -3);
+  scene.add(rim);
+
+  // Podium disc — dark with gold glow ring underneath
+  const podiumGeom = new THREE.CylinderGeometry(0.62, 0.7, 0.06, 48);
+  const podiumMat = new THREE.MeshStandardMaterial({
+    color: 0x1a1228, roughness: 0.25, metalness: 0.6,
+    emissive: 0x1a1020, emissiveIntensity: 0.4,
+  });
+  const podium = new THREE.Mesh(podiumGeom, podiumMat);
+  podium.position.y = -0.03;
+  podium.receiveShadow = true;
+  scene.add(podium);
+
+  // Glowing ring above podium edge
+  const ringGeom = new THREE.RingGeometry(0.64, 0.78, 64);
+  const ringMat = new THREE.MeshBasicMaterial({
+    color: 0xffd089, transparent: true, opacity: 0.55, side: THREE.DoubleSide,
+  });
+  const ring = new THREE.Mesh(ringGeom, ringMat);
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = 0.005;
+  scene.add(ring);
+
+  // Inner glow disc
+  const glowGeom = new THREE.CircleGeometry(0.62, 48);
+  const glowMat = new THREE.MeshBasicMaterial({
+    color: 0xffb96b, transparent: true, opacity: 0.18,
+  });
+  const glow = new THREE.Mesh(glowGeom, glowMat);
+  glow.rotation.x = -Math.PI / 2;
+  glow.position.y = 0.006;
+  scene.add(glow);
+
+  // Floating sparkle particles
+  const sparkleGeom = new THREE.BufferGeometry();
+  const sparkleCount = 28;
+  const positions = new Float32Array(sparkleCount * 3);
+  const sparkleData = [];
+  for (let i = 0; i < sparkleCount; i++) {
+    const r = 0.55 + Math.random() * 0.4;
+    const a = Math.random() * Math.PI * 2;
+    const y = 0.1 + Math.random() * 1.6;
+    positions[i * 3] = Math.cos(a) * r;
+    positions[i * 3 + 1] = y;
+    positions[i * 3 + 2] = Math.sin(a) * r;
+    sparkleData.push({ baseY: y, speed: 0.05 + Math.random() * 0.12, phase: Math.random() * Math.PI * 2, baseA: a, baseR: r });
+  }
+  sparkleGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const sparkleMat = new THREE.PointsMaterial({
+    color: 0xffd089, size: 0.04, transparent: true, opacity: 0.85,
+    sizeAttenuation: true, depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const sparkles = new THREE.Points(sparkleGeom, sparkleMat);
+  scene.add(sparkles);
+
+  const camera = new THREE.PerspectiveCamera(26, 1, 0.1, 50);
+  camera.position.set(0, 1.2, 3.6);
+  camera.lookAt(0, 0.92, 0);
+
+  previewState = {
+    renderer, scene, camera, character: null,
+    frameId: null, autoRotate: true, dragging: false,
+    lastPointerX: 0, rotationY: 0, rotationVel: 0,
+    sparkles, sparkleData, sparklePositions: positions,
+    podium, ring, glow, key, fill, rim, hemi,
+    listeners: {},
+    timeSec: 0,
+  };
+
+  buildPreviewCharacter();
+
+  // Drag-to-rotate
+  const onDown = (e) => {
+    previewState.dragging = true;
+    previewState.autoRotate = false;
+    previewState.lastPointerX = e.touches ? e.touches[0].clientX : e.clientX;
+    previewState.rotationVel = 0;
+  };
+  const onMove = (e) => {
+    if (!previewState || !previewState.dragging) return;
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    const dx = x - previewState.lastPointerX;
+    previewState.lastPointerX = x;
+    previewState.rotationY += dx * 0.013;
+    previewState.rotationVel = dx * 0.013;
+    if (previewState.character) previewState.character.rotation.y = previewState.rotationY;
+    e.preventDefault?.();
+  };
+  const onUp = () => {
+    if (!previewState) return;
+    previewState.dragging = false;
+    setTimeout(() => { if (previewState) previewState.autoRotate = true; }, 1800);
+  };
+  canvas.addEventListener('pointerdown', onDown);
+  window.addEventListener('pointermove', onMove);
+  window.addEventListener('pointerup', onUp);
+  window.addEventListener('pointercancel', onUp);
+  previewState.listeners = { onDown, onMove, onUp, canvas };
+
+  const resize = () => {
+    if (!previewState) return;
+    const w = canvas.clientWidth || 240;
+    const h = canvas.clientHeight || 320;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  };
+  resize();
+  window.addEventListener('resize', resize);
+  previewState.listeners.resize = resize;
+
+  const tick = () => {
+    if (!previewState) return;
+    previewState.timeSec += 1 / 60;
+    const t = previewState.timeSec;
+
+    // Auto-rotate when not interacting
+    if (previewState.autoRotate && !previewState.dragging) {
+      previewState.rotationY += 0.0042 + previewState.rotationVel * 0.92;
+      previewState.rotationVel *= 0.94;
+    }
+    if (previewState.character) {
+      previewState.character.rotation.y = previewState.rotationY;
+      // Subtle idle bob
+      previewState.character.position.y = Math.sin(t * 1.4) * 0.013;
+      // Slight head turn following auto-rotate
+      const refs = previewState.characterRefs;
+      if (refs?.head) {
+        refs.head.rotation.y = Math.sin(t * 0.8) * 0.08;
+        refs.head.rotation.x = Math.sin(t * 0.6) * 0.04;
+      }
+    }
+
+    // Pulse the ring
+    previewState.ring.material.opacity = 0.42 + Math.sin(t * 1.8) * 0.16;
+    previewState.glow.material.opacity = 0.14 + Math.sin(t * 1.8) * 0.06;
+
+    // Float sparkles
+    for (let i = 0; i < previewState.sparkleData.length; i++) {
+      const d = previewState.sparkleData[i];
+      const angle = d.baseA + t * d.speed;
+      const yOff = Math.sin(t * d.speed * 3 + d.phase) * 0.18;
+      previewState.sparklePositions[i * 3] = Math.cos(angle) * d.baseR;
+      previewState.sparklePositions[i * 3 + 1] = d.baseY + yOff;
+      previewState.sparklePositions[i * 3 + 2] = Math.sin(angle) * d.baseR;
+    }
+    previewState.sparkles.geometry.attributes.position.needsUpdate = true;
+
+    renderer.render(scene, camera);
+    previewState.frameId = requestAnimationFrame(tick);
+  };
+  tick();
+}
+
+function buildPreviewCharacter() {
+  if (!previewState) return;
+  if (previewState.character) {
+    previewState.scene.remove(previewState.character);
+    previewState.character.traverse(o => {
+      if (o.isMesh) { o.geometry?.dispose(); o.material?.dispose(); }
+    });
+  }
+  const built = createCharacterMesh(pendingAppearance);
+  built.group.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  built.group.rotation.y = previewState.rotationY;
+  previewState.scene.add(built.group);
+  previewState.character = built.group;
+  previewState.characterRefs = built;
+}
+
+function refreshCharacterPreview() {
+  if (!previewState) { initCharacterPreview(); return; }
+  buildPreviewCharacter();
+}
+
+function disposeCharacterPreview() {
+  if (!previewState) return;
+  if (previewState.frameId) cancelAnimationFrame(previewState.frameId);
+  const { onDown, onMove, onUp, canvas, resize } = previewState.listeners;
+  if (canvas && onDown) canvas.removeEventListener('pointerdown', onDown);
+  if (onMove) window.removeEventListener('pointermove', onMove);
+  if (onUp) {
+    window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointercancel', onUp);
+  }
+  if (resize) window.removeEventListener('resize', resize);
+  previewState.scene.traverse(o => {
+    if (o.isMesh) {
+      o.geometry?.dispose();
+      if (Array.isArray(o.material)) o.material.forEach(m => m?.dispose());
+      else o.material?.dispose();
+    }
+    if (o.isPoints) {
+      o.geometry?.dispose();
+      o.material?.dispose();
+    }
+  });
+  previewState.renderer.dispose();
+  previewState = null;
 }
 
 startBtn.addEventListener('click', () => {
@@ -4557,12 +4670,13 @@ if (randomBtn) randomBtn.addEventListener('click', () => {
   pendingAppearance.traits = traitIds;
   refreshPickers();
   refreshTraits();
-  drawPreview();
+  refreshCharacterPreview();
 });
 
 function startGame() {
   bootEl.hidden = true;
   gameEl.hidden = false;
+  disposeCharacterPreview();
   lastEventDay = 0;
   lastBillDay = 0;
   lastWeatherDay = 0;
