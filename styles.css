@@ -7,8 +7,8 @@
   --glass: rgba(255, 255, 255, 0.08);
   --glass-strong: rgba(255, 255, 255, 0.14);
   --ink: #f8efdc;
-  --ink-soft: #b8a890;
-  --ink-dim: #8a7e68;
+  --ink-soft: #d6c8af;
+  --ink-dim: #998b75;
   --accent: #f4b860;
   --accent-glow: #ffd089;
   --accent-2: #e87a5d;
@@ -103,8 +103,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   flex-wrap: wrap;
 }
 .swatch {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: 2px solid transparent;
   transition: transform 0.15s, border-color 0.2s;
@@ -208,19 +208,28 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   margin-bottom: 20px;
 }
 .boot-card input:focus { border-color: var(--accent); }
-.boot-actions { display: flex; gap: 10px; }
+.boot-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .boot-actions button {
   flex: 1;
+  min-width: 100px;
   padding: 14px;
-  border-radius: 12px;
-  font-size: 15px;
-  font-weight: 600;
-  background: var(--accent);
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 700;
+  background: var(--grad-accent);
   color: #2a1f3d;
-  transition: transform 0.1s, filter 0.2s;
+  letter-spacing: 0.3px;
+  box-shadow: 0 4px 14px rgba(244,184,96,0.3);
+  transition: all 0.2s;
 }
 .boot-actions button:active { transform: scale(0.97); filter: brightness(0.92); }
-#continue-btn { background: var(--bg-soft); color: var(--ink); }
+.boot-actions button.secondary {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: var(--ink);
+  box-shadow: none;
+}
+#continue-btn { background: var(--bg-soft); color: var(--ink); box-shadow: none; }
 
 #game {
   display: flex;
@@ -435,7 +444,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   background: var(--glass-strong);
   box-shadow: inset 0 2px 6px rgba(0,0,0,0.3);
 }
-.action-btn:disabled { opacity: 0.4; }
+.action-btn:disabled, .action-btn[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
+.action-btn[aria-disabled="true"]:active { transform: none; }
 .action-btn[data-quick="build"] {
   background: linear-gradient(135deg, rgba(244,184,96,0.15) 0%, rgba(232,122,93,0.1) 100%);
   border-color: rgba(244,184,96,0.25);
@@ -476,15 +486,15 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 #modal-x {
   position: absolute;
   top: 10px; right: 10px;
-  width: 32px; height: 32px;
+  width: 40px; height: 40px;
   border-radius: 50%;
   background: rgba(255,255,255,0.1);
   border: 1px solid rgba(255,255,255,0.12);
   color: var(--ink);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
   display: flex; align-items: center; justify-content: center;
-  z-index: 1;
+  z-index: 2;
   transition: all 0.2s;
 }
 #modal-x:hover, #modal-x:active {

@@ -137,20 +137,20 @@ const FRONT_DOOR = [5,13];
 const ITEMS = [];
 
 const ACTIONS = {
-  sleep:   { label: 'Dormir', durationMin: 480, fast: true, effect: { energy: 120, hygiene: -8, hunger: -10 }, money: 0 },
+  sleep:   { label: 'Dormir', durationMin: 480, fast: true, effect: { energy: 120, hygiene: -4, hunger: -6 }, money: 0 },
   shower:  { label: 'Se doucher', durationMin: 30, effect: { hygiene: 70, energy: 4 } },
   toilet:  { label: 'Aux toilettes', durationMin: 10, effect: { hygiene: 4, fun: 1 } },
-  work:    { label: 'Travailler', durationMin: 120, effect: { energy: -18, social: -10, fun: -8 }, money: 60 },
-  plant:   { label: 'Arroser la plante', durationMin: 5, effect: { fun: 4 } },
-  snack:   { label: 'Grignoter', durationMin: 15, effect: { hunger: 25, hygiene: -2 } },
-  cook:    { label: 'Cuisiner', durationMin: 45, effect: { hunger: 65, fun: 10, hygiene: -3 }, money: -8 },
+  work:    { label: 'Travailler', durationMin: 120, effect: { energy: -16, social: -10, fun: -8 }, money: 95 },
+  plant:   { label: 'Arroser la plante', durationMin: 8, effect: { fun: 8 } },
+  snack:   { label: 'Grignoter', durationMin: 15, effect: { hunger: 30, hygiene: -2 } },
+  cook:    { label: 'Cuisiner', durationMin: 45, effect: { hunger: 70, fun: 12, hygiene: -3 }, money: -5 },
   tv:      { label: 'Regarder la télé', durationMin: 30, effect: { fun: 30, energy: 5, social: 5 } },
   relax:   { label: 'Se détendre', durationMin: 20, effect: { fun: 12, energy: 8 } },
   call:    { label: 'Appeler un ami', durationMin: 20, effect: { social: 38, fun: 5 } },
 };
 
 const DECAY = {
-  hunger: 0.14, energy: 0.08, hygiene: 0.07, social: 0.05, fun: 0.06,
+  hunger: 0.10, energy: 0.06, hygiene: 0.06, social: 0.04, fun: 0.05,
 };
 
 const NEED_KEYS = ['hunger', 'energy', 'hygiene', 'social', 'fun'];
@@ -385,18 +385,18 @@ const SKILL_LABELS = { cooking: 'Cuisine', fitness: 'Forme', charisma: 'Charisme
 const SKILL_ICONS = { cooking: '🍳', fitness: '💪', charisma: '💬', logic: '🧠', art: '🎨', music: '🎵' };
 
 const ACTION_SKILL_GAINS = {
-  cook: { cooking: 8 },
-  snack: { cooking: 2 },
-  work: { logic: 6 },
-  tv: { charisma: 2 },
-  relax: { fitness: 1 },
-  sleep: { fitness: 1 },
-  shower: { fitness: 1 },
-  call: { charisma: 4 },
-  plant: { art: 2 },
+  cook: { cooking: 18 },
+  snack: { cooking: 5 },
+  work: { logic: 14 },
+  tv: { charisma: 5 },
+  relax: { fitness: 4, art: 2 },
+  sleep: { fitness: 3 },
+  shower: { fitness: 3 },
+  call: { charisma: 12 },
+  plant: { art: 8 },
 };
 
-const CAREER_THRESHOLDS = [0, 100, 250, 500, 900, 1500, 2500];
+const CAREER_THRESHOLDS = [0, 75, 175, 325, 525, 800, 1200];
 const CAREER_TITLES = ['Stagiaire', 'Junior', 'Confirmé', 'Senior', 'Lead', 'Manager', 'Directeur', 'CEO'];
 
 function careerLevel(xp) {
@@ -409,8 +409,8 @@ function defaultState(name) {
   return {
     name: name || 'Toi',
     appearance: defaultAppearance(),
-    needs: { hunger: 100, energy: 100, hygiene: 100, social: 100, fun: 100 },
-    money: 2500,
+    needs: { hunger: 75, energy: 80, hygiene: 80, social: 70, fun: 70 },
+    money: 3000,
     timeMin: 8 * 60,
     day: 1,
     player: { x: 3, y: 3, sub: 0, dir: 'down', anim: 0 },
@@ -484,6 +484,10 @@ let composer, bloomPass, fxaaPass;
 let floorMesh;
 let blinkTimer = 0;
 const flickerMeshes = [];
+const _floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const _vec3 = new THREE.Vector3();
+const _color1 = new THREE.Color();
+const _color2 = new THREE.Color();
 let catGroup = null;
 let catState = { x: 7, y: 10, sub: 0, dir: 'down', target: null, idle: 0, anim: 0 };
 let audioCtx = null;
@@ -967,11 +971,23 @@ function buildItems() {
 }
 
 function rebuildPlacedItems() {
-  for (const m of itemMeshes.filter(o => o.userData?.placed)) {
+  const placedGroups = itemMeshes.filter(o => o.userData?.placed);
+  const placedLightSet = new Set();
+  for (const m of placedGroups) {
+    m.traverse(o => {
+      if (o.isMesh) {
+        o.geometry.dispose();
+        if (o.material) {
+          if (Array.isArray(o.material)) o.material.forEach(mat => mat.dispose());
+          else o.material.dispose();
+        }
+      }
+      if (o.isLight) placedLightSet.add(o);
+    });
     scene.remove(m);
-    m.traverse(o => { if (o.isMesh) { o.geometry.dispose(); } });
   }
   itemMeshes = itemMeshes.filter(o => !o.userData?.placed);
+  lampLights = lampLights.filter(lp => !placedLightSet.has(lp.light));
   for (const p of state.placed) {
     const def = BUILD_CATALOG.find(c => c.type === p.type);
     const it = { id: p.id, type: p.type, x: p.x, y: p.y, w: p.w, h: p.h, label: p.name, action: def?.action || null, placed: true };
@@ -1659,6 +1675,22 @@ function buildPlayer() {
       tuft.castShadow = true;
       tuft.rotation.x = -0.3;
       hairGroup.add(tuft);
+    } else if (app.hairStyle === 'bun') {
+      const bun = new THREE.Mesh(new THREE.SphereGeometry(0.085, 12, 10), hairMat);
+      bun.position.set(0, 1.5, 0.12);
+      bun.castShadow = true;
+      hairGroup.add(bun);
+      const wrap = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.018, 6, 16), hairMat);
+      wrap.position.set(0, 1.5, 0.12);
+      wrap.rotation.y = Math.PI / 2;
+      hairGroup.add(wrap);
+    } else if (app.hairStyle === 'curly') {
+      for (const [px, py, pz, r] of [[0, 1.45, -0.04, 0.07], [-0.1, 1.45, 0, 0.06], [0.1, 1.45, 0, 0.06], [-0.06, 1.5, -0.08, 0.055], [0.06, 1.5, -0.08, 0.055], [0, 1.52, 0.06, 0.06]]) {
+        const curl = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), hairMat);
+        curl.position.set(px, py, pz);
+        curl.castShadow = true;
+        hairGroup.add(curl);
+      }
     }
     playerHair = hairGroup;
     playerGroup.add(hairGroup);
@@ -1881,9 +1913,8 @@ function onPointerDown(e) {
   }
 
   if (state.buildMode) {
-    const planeY = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-    const hit = new THREE.Vector3();
-    raycaster.ray.intersectPlane(planeY, hit);
+    raycaster.ray.intersectPlane(_floorPlane, _vec3);
+    const hit = _vec3;
     if (hit) {
       const tx = Math.floor(hit.x);
       const ty = Math.floor(hit.z);
@@ -1928,12 +1959,17 @@ function onPointerDown(e) {
 function tryPlace(tx, ty) {
   const def = state.buildMode;
   if (!def) return;
+  const isNonBlocking = NON_BLOCKING_TYPES.has(def.type);
   for (let dy = 0; dy < def.h; dy++) {
     for (let dx = 0; dx < def.w; dx++) {
       const cx = tx + dx, cy = ty + dy;
       if (cx < 0 || cx >= COLS || cy < 0 || cy >= ROWS) { toast('Hors zone.'); return; }
+      if (!isNonBlocking && cx === state.player.x && cy === state.player.y) { toast('Tu es dessus, déplace-toi.'); return; }
+      if (DOOR_TILES.some(([d0, d1]) => d0 === cx && d1 === cy) || (FRONT_DOOR[0] === cx && FRONT_DOOR[1] === cy)) {
+        if (!isNonBlocking) { toast('Pas dans une porte.'); return; }
+      }
       if (grid[cy][cx] !== 0) {
-        if (!NON_BLOCKING_TYPES.has(def.type)) { toast('Case occupée.'); return; }
+        if (!isNonBlocking) { toast('Case occupée.'); return; }
         if (grid[cy][cx] === 1) { toast('Pas sur un mur.'); return; }
       }
     }
@@ -2131,9 +2167,9 @@ function updateDayNight() {
                     + Math.sin(tnow * 23.1 + seed * 2.3) * 0.025;
     lp.light.intensity = lampOn * 1.6 * flick;
     if (lp.bulb && lp.bulb.material) {
-      const c = new THREE.Color(lp.baseColor);
-      const dim = new THREE.Color(0x3a3530);
-      lp.bulb.material.color.copy(dim).lerp(c, lampOn).multiplyScalar(0.85 + flick * 0.15);
+      _color1.set(lp.baseColor);
+      _color2.setHex(0x3a3530);
+      lp.bulb.material.color.copy(_color2).lerp(_color1, lampOn).multiplyScalar(0.85 + flick * 0.15);
     }
   }
 
@@ -2266,6 +2302,11 @@ function updateHUD() {
   }
   document.getElementById('chip-money').textContent = '$' + Math.floor(state.money);
   document.getElementById('chip-time').textContent = `Jour ${state.day} · ${formatTime(state.timeMin)}`;
+  const sleepBtn = document.querySelector('[data-quick="sleep"]');
+  if (sleepBtn) {
+    const hasBed = state.placed?.some(p => p.type === 'bed');
+    sleepBtn.setAttribute('aria-disabled', hasBed ? 'false' : 'true');
+  }
 }
 
 document.querySelectorAll('.action-btn').forEach(btn => {
@@ -2638,6 +2679,20 @@ startBtn.addEventListener('click', () => {
 continueBtn.addEventListener('click', () => {
   if (saved) applyLoaded(saved);
   startGame();
+});
+const randomBtn = document.getElementById('random-btn');
+if (randomBtn) randomBtn.addEventListener('click', () => {
+  const pickRand = arr => arr[Math.floor(Math.random() * arr.length)];
+  for (const [key, options] of Object.entries(APPEARANCE_PALETTES)) {
+    if (typeof options[0] === 'object') pendingAppearance[key] = pickRand(options).id;
+    else pendingAppearance[key] = pickRand(options);
+  }
+  pendingAppearance.traits = [];
+  const traitIds = TRAITS.map(t => t.id).sort(() => Math.random() - 0.5).slice(0, 2);
+  pendingAppearance.traits = traitIds;
+  refreshPickers();
+  refreshTraits();
+  drawPreview();
 });
 
 function startGame() {
