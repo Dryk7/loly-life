@@ -34,6 +34,13 @@ const ZONES = [
   { name: 'living', x0: 5, y0: 8, x1: 10, y1: 14, color: 0xcee0c5 },
 ];
 
+const INNER_WALLS = [
+  [1,5],[2,5],[3,5],[4,5],[6,5],[7,5],[8,5],[9,5],
+  [1,8],[2,8],[3,8],[4,8],[6,8],[7,8],[8,8],[9,8],
+];
+
+const DOOR_TILES = [[5,5],[5,8]];
+
 const ITEMS = [
   { id: 'bed', type: 'bed', x: 1, y: 1, w: 2, h: 1, label: 'Lit', action: 'sleep' },
   { id: 'wardrobe', type: 'wardrobe', x: 4, y: 1, w: 1, h: 1, label: 'Armoire', action: null },
@@ -115,6 +122,7 @@ function buildGrid() {
   const g = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
   for (let x = 0; x < COLS; x++) { g[0][x] = 1; g[ROWS - 1][x] = 1; }
   for (let y = 0; y < ROWS; y++) { g[y][0] = 1; g[y][COLS - 1] = 1; }
+  for (const [wx, wy] of INNER_WALLS) g[wy][wx] = 1;
   for (const it of ITEMS) {
     for (let dy = 0; dy < it.h; dy++) {
       for (let dx = 0; dx < it.w; dx++) {
@@ -348,17 +356,59 @@ function buildWorld() {
   }
 
   const wallMat = new THREE.MeshLambertMaterial({ color: 0x8b6f47 });
-  const wallTopMat = new THREE.MeshLambertMaterial({ color: 0xa48761 });
+  const innerWallMat = new THREE.MeshLambertMaterial({ color: 0xb89568 });
   const wallH = 2.2;
+  const innerWallH = 1.4;
   const wallGeom = new THREE.BoxGeometry(1, wallH, 1);
+  const innerWallGeom = new THREE.BoxGeometry(1, innerWallH, 0.18);
+  const innerSet = new Set(INNER_WALLS.map(([x, y]) => `${x},${y}`));
   for (let y = 0; y < ROWS; y++) {
     for (let x = 0; x < COLS; x++) {
       if (grid[y][x] !== 1) continue;
-      const mesh = new THREE.Mesh(wallGeom, wallMat);
-      mesh.position.set(x + 0.5, wallH / 2, y + 0.5);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      scene.add(mesh);
+      const isInner = innerSet.has(`${x},${y}`);
+      if (isInner) {
+        const isHorizontal = INNER_WALLS.filter(([wx, wy]) => wy === y).some(([wx]) => wx === x - 1 || wx === x + 1);
+        const geom = isHorizontal ? new THREE.BoxGeometry(1, innerWallH, 0.18) : new THREE.BoxGeometry(0.18, innerWallH, 1);
+        const mesh = new THREE.Mesh(geom, innerWallMat);
+        mesh.position.set(x + 0.5, innerWallH / 2, y + 0.5);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        scene.add(mesh);
+        const top = new THREE.Mesh(new THREE.BoxGeometry(isHorizontal ? 1 : 0.22, 0.05, isHorizontal ? 0.22 : 1), new THREE.MeshLambertMaterial({ color: 0x8b6841 }));
+        top.position.set(x + 0.5, innerWallH + 0.025, y + 0.5);
+        top.receiveShadow = true;
+        scene.add(top);
+      } else {
+        const mesh = new THREE.Mesh(wallGeom, wallMat);
+        mesh.position.set(x + 0.5, wallH / 2, y + 0.5);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        scene.add(mesh);
+      }
+    }
+  }
+
+  for (const [dx, dy] of DOOR_TILES) {
+    const isHorizontalRow = INNER_WALLS.some(([wx, wy]) => wy === dy);
+    const frameMat = new THREE.MeshLambertMaterial({ color: 0x6b4a30 });
+    const frame = new THREE.Mesh(
+      isHorizontalRow ? new THREE.BoxGeometry(1, 0.12, 0.22) : new THREE.BoxGeometry(0.22, 0.12, 1),
+      frameMat
+    );
+    frame.position.set(dx + 0.5, innerWallH + 0.06, dy + 0.5);
+    frame.receiveShadow = true;
+    scene.add(frame);
+    const sideW = 0.08;
+    const sideH = innerWallH;
+    if (isHorizontalRow) {
+      const side1 = new THREE.Mesh(new THREE.BoxGeometry(sideW, sideH, 0.18), frameMat);
+      side1.position.set(dx + 0.5 - 0.46, sideH / 2, dy + 0.5);
+      side1.castShadow = true;
+      scene.add(side1);
+      const side2 = new THREE.Mesh(new THREE.BoxGeometry(sideW, sideH, 0.18), frameMat);
+      side2.position.set(dx + 0.5 + 0.46, sideH / 2, dy + 0.5);
+      side2.castShadow = true;
+      scene.add(side2);
     }
   }
 
