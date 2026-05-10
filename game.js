@@ -716,7 +716,7 @@ function init3D() {
   const h = stage.clientHeight || 600;
 
   const aspect = w / h;
-  const d = 11;
+  const d = 9.5;
   camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 0.1, 200);
   positionCamera();
 
@@ -727,7 +727,7 @@ function init3D() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = 1.25;
 
   const pmrem = new THREE.PMREMGenerator(renderer);
   pmrem.compileEquirectangularShader();
@@ -744,22 +744,22 @@ function init3D() {
   composer.addPass(new RenderPass(scene, camera));
 
   const saoPass = new SAOPass(scene, camera);
-  saoPass.params.saoIntensity = 0.018;
-  saoPass.params.saoBias = 0.5;
+  saoPass.params.saoIntensity = 0.005;
+  saoPass.params.saoBias = 1.0;
   saoPass.params.saoScale = 1;
-  saoPass.params.saoKernelRadius = 30;
+  saoPass.params.saoKernelRadius = 20;
   saoPass.params.saoMinResolution = 0;
   saoPass.params.saoBlur = true;
-  saoPass.params.saoBlurRadius = 6;
-  saoPass.params.saoBlurStdDev = 4;
+  saoPass.params.saoBlurRadius = 4;
+  saoPass.params.saoBlurStdDev = 3;
   saoPass.params.saoBlurDepthCutoff = 0.01;
   composer.addPass(saoPass);
 
   outlinePass = new OutlinePass(new THREE.Vector2(w, h), scene, camera);
-  outlinePass.edgeStrength = 2.5;
+  outlinePass.edgeStrength = 5.0;
   outlinePass.edgeGlow = 0.0;
-  outlinePass.edgeThickness = 1.0;
-  outlinePass.visibleEdgeColor.set(0x1a1428);
+  outlinePass.edgeThickness = 1.6;
+  outlinePass.visibleEdgeColor.set(0x000000);
   outlinePass.hiddenEdgeColor.set(0x000000);
   composer.addPass(outlinePass);
 
@@ -848,8 +848,8 @@ function init3D() {
 
 function positionCamera() {
   const cx = COLS / 2;
-  const cz = 12;
-  camera.position.set(cx + 16, 22, cz + 16);
+  const cz = 10;
+  camera.position.set(cx + 13, 18, cz + 13);
   camera.lookAt(cx, 0.5, cz);
 }
 
@@ -3659,7 +3659,7 @@ function onResize() {
   const stage = document.getElementById('stage');
   const w = stage.clientWidth, h = stage.clientHeight;
   const aspect = w / h;
-  const d = 11;
+  const d = 9.5;
   camera.left = -d * aspect;
   camera.right = d * aspect;
   camera.top = d;
@@ -4416,7 +4416,7 @@ function startGame() {
   showWeatherBadge();
   requestAnimationFrame(loop);
   if (state.tutorial) {
-    setTimeout(() => toast(`👋 Bienvenue ${state.name} ! Ton appart est vide — tape 🔨 Construire pour acheter ton mobilier.`, 6000), 600);
+    setTimeout(() => toast(`👋 Bienvenue ${state.name} ! Ta maison est vide — tape 🔨 Construire pour acheter ton mobilier.`, 6000), 600);
     setTimeout(() => toast(`💡 Achète au minimum un Lit, un Frigo, des WC et une Douche.`, 5000), 7500);
     setTimeout(() => toast(`📱 Tape Tél. pour ouvrir ton smartphone (banque, livraison, amis)`, 5000), 13000);
     setTimeout(() => { state.tutorial = false; saveGame(); }, 19000);
