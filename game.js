@@ -332,10 +332,12 @@ function init3D() {
   composer.addPass(fxaaPass);
   composer.addPass(new OutputPass());
 
-  hemi = new THREE.HemisphereLight(0xfff5d0, 0x8b6f47, 0.55);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+
+  hemi = new THREE.HemisphereLight(0xffeec0, 0xa48564, 0.85);
   scene.add(hemi);
 
-  sun = new THREE.DirectionalLight(0xffeac0, 0.85);
+  sun = new THREE.DirectionalLight(0xfff0c8, 1.4);
   sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024);
   sun.shadow.camera.near = 0.1;
@@ -1523,14 +1525,14 @@ function updateDayNight() {
     else dayFactor = 1;
   }
 
-  sun.intensity = 0.15 + dayFactor * 0.85;
-  hemi.intensity = 0.25 + dayFactor * 0.5;
-  ambientNight.intensity = (1 - dayFactor) * 1.2;
+  sun.intensity = 0.15 + dayFactor * 1.35;
+  hemi.intensity = 0.45 + dayFactor * 0.7;
+  ambientNight.intensity = (1 - dayFactor) * 1.5;
 
   let sky = 0x1a1428;
-  if (dayFactor > 0.7) sky = 0x2a3550;
-  else if (dayFactor > 0.3) sky = 0x4a2f3a;
-  else if (dayFactor > 0.05) sky = 0x261c3e;
+  if (dayFactor > 0.7) sky = 0x6a92c0;
+  else if (dayFactor > 0.3) sky = 0xc88670;
+  else if (dayFactor > 0.05) sky = 0x342852;
   scene.background.setHex(sky);
   if (scene.fog) scene.fog.color.setHex(sky);
 
