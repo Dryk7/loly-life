@@ -382,6 +382,77 @@ function buildWorld() {
 
   drawRug(6, 10, 2, 1, 0xa86060);
   drawRug(2, 3, 2, 1, 0x7a6f9b);
+
+  buildLamps();
+}
+
+function buildLamps() {
+  addFloorLamp(8.5, 3.5, 0xfdd585);
+  addPendant(6.5, 11.5, 0xffeac0);
+  addWallSconce(0.55, 4, 0xfeb778);
+  addCeilingLight(2.5, 9.5, 0xfff0c8);
+}
+
+function addFloorLamp(x, z, color) {
+  const group = new THREE.Group();
+  group.position.set(x, 0, z);
+  const baseMat = lamMat(0x2a2a2a);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.18, 0.04, 12), baseMat);
+  base.position.y = 0.02; base.receiveShadow = true; group.add(base);
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.6, 8), baseMat);
+  post.position.y = 0.85; post.castShadow = true; group.add(post);
+  const shadeMat = lamMat(0xf5e6c8);
+  const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.28, 16, 1, true), shadeMat);
+  shade.position.y = 1.55; shadeMat.side = THREE.DoubleSide; group.add(shade);
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 8), new THREE.MeshBasicMaterial({ color }));
+  bulb.position.y = 1.5; group.add(bulb);
+  const light = new THREE.PointLight(color, 0, 5, 1.6);
+  light.position.y = 1.5; light.castShadow = false; group.add(light);
+  scene.add(group);
+  lampLights.push({ light, bulb, baseColor: color });
+}
+
+function addPendant(x, z, color) {
+  const group = new THREE.Group();
+  group.position.set(x, 0, z);
+  const cordMat = lamMat(0x202020);
+  const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.6, 6), cordMat);
+  cord.position.y = 1.9; group.add(cord);
+  const shadeMat = lamMat(0xc88a4a);
+  const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 0.22, 16, 1, true), shadeMat);
+  shade.position.y = 1.5; shadeMat.side = THREE.DoubleSide; shade.castShadow = true; group.add(shade);
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 8), new THREE.MeshBasicMaterial({ color }));
+  bulb.position.y = 1.5; group.add(bulb);
+  const light = new THREE.PointLight(color, 0, 5, 1.4);
+  light.position.y = 1.4; light.castShadow = false; group.add(light);
+  scene.add(group);
+  lampLights.push({ light, bulb, baseColor: color });
+}
+
+function addWallSconce(x, z, color) {
+  const group = new THREE.Group();
+  group.position.set(x, 0, z);
+  const arm = new THREE.Mesh(rb(0.06, 0.08, 0.18, 0.02), lamMat(0x4a3520));
+  arm.position.set(0, 1.5, 0.15); arm.castShadow = true; group.add(arm);
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 8), new THREE.MeshBasicMaterial({ color }));
+  bulb.position.set(0, 1.5, 0.28); group.add(bulb);
+  const light = new THREE.PointLight(color, 0, 4, 1.5);
+  light.position.set(0, 1.5, 0.35); light.castShadow = false; group.add(light);
+  scene.add(group);
+  lampLights.push({ light, bulb, baseColor: color });
+}
+
+function addCeilingLight(x, z, color) {
+  const group = new THREE.Group();
+  group.position.set(x, 0, z);
+  const shade = new THREE.Mesh(new THREE.SphereGeometry(0.18, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), lamMat(0xf5f0e8));
+  shade.position.y = 2.1; shade.castShadow = true; group.add(shade);
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 8), new THREE.MeshBasicMaterial({ color }));
+  bulb.position.y = 2.0; group.add(bulb);
+  const light = new THREE.PointLight(color, 0, 5, 1.4);
+  light.position.y = 1.9; light.castShadow = false; group.add(light);
+  scene.add(group);
+  lampLights.push({ light, bulb, baseColor: color });
 }
 
 function drawRug(x, y, w, h, color) {
@@ -616,35 +687,32 @@ function buildPlayer() {
   const torsoW = isWoman ? 0.36 : 0.42;
 
   if (app.top === 'robe') {
-    const dress = new THREE.Mesh(new THREE.BoxGeometry(torsoW, 0.55, 0.22), shirtMat);
-    dress.position.y = 0.85;
+    const dress = new THREE.Mesh(rb(torsoW, 0.55, 0.24, 0.04), shirtMat);
+    dress.position.y = 0.88;
     dress.castShadow = true;
     dress.receiveShadow = true;
     playerGroup.add(dress);
-    const skirt = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.32, 0.4, 0.45, 8),
-      shirtMat
-    );
-    skirt.position.y = 0.32;
+    const skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.42, 0.5, 16), shirtMat);
+    skirt.position.y = 0.34;
     skirt.castShadow = true;
     skirt.receiveShadow = true;
     playerGroup.add(skirt);
   } else {
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(torsoW, 0.5, 0.22), shirtMat);
-    torso.position.y = 0.85;
+    const torso = new THREE.Mesh(rb(torsoW, 0.5, 0.24, 0.05), shirtMat);
+    torso.position.y = 0.88;
     torso.castShadow = true;
     torso.receiveShadow = true;
     playerGroup.add(torso);
 
     if (app.top === 'tank') {
-      const sk = new THREE.Mesh(new THREE.BoxGeometry(torsoW + 0.005, 0.18, 0.225), skinMat);
-      sk.position.y = 1.02;
+      const sk = new THREE.Mesh(rb(torsoW + 0.005, 0.18, 0.245, 0.04), skinMat);
+      sk.position.y = 1.05;
       sk.castShadow = true;
       playerGroup.add(sk);
     }
 
     if (app.bottom === 'pants') {
-      const legGeom = new THREE.BoxGeometry(0.13, 0.5, 0.16);
+      const legGeom = rb(0.14, 0.5, 0.17, 0.04);
       legGeom.translate(0, -0.25, 0);
       playerLegL = new THREE.Mesh(legGeom, pantsMat);
       playerLegL.position.set(-0.08, 0.6, 0);
@@ -655,14 +723,14 @@ function buildPlayer() {
       playerLegR.castShadow = true;
       playerGroup.add(playerLegR);
     } else if (app.bottom === 'short') {
-      const sLegGeom = new THREE.BoxGeometry(0.13, 0.22, 0.16);
+      const sLegGeom = rb(0.14, 0.22, 0.17, 0.04);
       sLegGeom.translate(0, -0.11, 0);
       playerLegL = new THREE.Mesh(sLegGeom, pantsMat);
       playerLegL.position.set(-0.08, 0.6, 0);
       playerLegL.castShadow = true;
       playerGroup.add(playerLegL);
-      const skLegGeom = new THREE.BoxGeometry(0.13, 0.28, 0.16);
-      skLegGeom.translate(0, -0.14, 0);
+      const skLegGeom = rb(0.13, 0.3, 0.16, 0.04);
+      skLegGeom.translate(0, -0.15, 0);
       const skinLegL = new THREE.Mesh(skLegGeom, skinMat);
       skinLegL.position.set(-0.08, 0.38, 0);
       skinLegL.castShadow = true;
@@ -678,15 +746,12 @@ function buildPlayer() {
       playerLegR.userData.skinPart = skinLegR;
       playerGroup.add(skinLegR);
     } else if (app.bottom === 'skirt') {
-      const skirt = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.22, 0.32, 0.3, 8),
-        pantsMat
-      );
-      skirt.position.y = 0.45;
+      const skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.34, 0.32, 16), pantsMat);
+      skirt.position.y = 0.46;
       skirt.castShadow = true;
       playerGroup.add(skirt);
-      const skLegGeom = new THREE.BoxGeometry(0.1, 0.25, 0.1);
-      skLegGeom.translate(0, -0.125, 0);
+      const skLegGeom = rb(0.11, 0.28, 0.11, 0.04);
+      skLegGeom.translate(0, -0.14, 0);
       playerLegL = new THREE.Mesh(skLegGeom, skinMat);
       playerLegL.position.set(-0.08, 0.3, 0);
       playerLegL.castShadow = true;
@@ -699,27 +764,35 @@ function buildPlayer() {
   }
 
   const armMat = (app.top === 'pull') ? shirtMat : skinMat;
-  const armGeom = new THREE.BoxGeometry(0.1, 0.45, 0.1);
+  const armGeom = rb(0.11, 0.45, 0.11, 0.04);
   armGeom.translate(0, -0.22, 0);
   playerArmL = new THREE.Mesh(armGeom, armMat);
-  playerArmL.position.set(-(torsoW / 2 + 0.05), 1.08, 0);
+  playerArmL.position.set(-(torsoW / 2 + 0.06), 1.1, 0);
   playerArmL.castShadow = true;
   playerGroup.add(playerArmL);
   playerArmR = new THREE.Mesh(armGeom, armMat);
-  playerArmR.position.set(torsoW / 2 + 0.05, 1.08, 0);
+  playerArmR.position.set(torsoW / 2 + 0.06, 1.1, 0);
   playerArmR.castShadow = true;
   playerGroup.add(playerArmR);
 
   if (app.top !== 'pull' && app.top !== 'tank') {
-    const sleeveL = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.1, 0.13), shirtMat);
-    sleeveL.position.set(-(torsoW / 2 + 0.05), 1.05, 0);
+    const sleeveL = new THREE.Mesh(rb(0.14, 0.11, 0.14, 0.04), shirtMat);
+    sleeveL.position.set(-(torsoW / 2 + 0.06), 1.07, 0);
     sleeveL.castShadow = true;
     playerGroup.add(sleeveL);
-    const sleeveR = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.1, 0.13), shirtMat);
-    sleeveR.position.set(torsoW / 2 + 0.05, 1.05, 0);
+    const sleeveR = new THREE.Mesh(rb(0.14, 0.11, 0.14, 0.04), shirtMat);
+    sleeveR.position.set(torsoW / 2 + 0.06, 1.07, 0);
     sleeveR.castShadow = true;
     playerGroup.add(sleeveR);
   }
+
+  const handGeom = new THREE.SphereGeometry(0.06, 12, 8);
+  const handL = new THREE.Mesh(handGeom, skinMat);
+  handL.position.set(0, -0.45, 0);
+  playerArmL.add(handL);
+  const handR = new THREE.Mesh(handGeom, skinMat);
+  handR.position.set(0, -0.45, 0);
+  playerArmR.add(handR);
 
   playerHead = new THREE.Mesh(new THREE.SphereGeometry(0.18, 14, 12), skinMat);
   playerHead.position.y = 1.32;
@@ -736,28 +809,66 @@ function buildPlayer() {
     cap.castShadow = true;
     hairGroup.add(cap);
     if (app.hairStyle === 'long') {
-      const back = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.32, 0.12), hairMat);
-      back.position.set(0, 1.18, 0.12);
+      const back = new THREE.Mesh(rb(0.34, 0.34, 0.14, 0.04), hairMat);
+      back.position.set(0, 1.2, 0.13);
       back.castShadow = true;
       hairGroup.add(back);
+      const strand = new THREE.Mesh(rb(0.32, 0.16, 0.06, 0.02), hairMat);
+      strand.position.set(0, 1.05, 0.18);
+      strand.castShadow = true;
+      hairGroup.add(strand);
     } else if (app.hairStyle === 'tuft') {
-      const tuft = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.18, 0.1), hairMat);
-      tuft.position.y = 1.55;
+      const tuft = new THREE.Mesh(rb(0.13, 0.18, 0.11, 0.03), hairMat);
+      tuft.position.set(0, 1.55, -0.04);
       tuft.castShadow = true;
+      tuft.rotation.x = -0.3;
       hairGroup.add(tuft);
     }
     playerHair = hairGroup;
     playerGroup.add(hairGroup);
   }
 
-  const eyeGeom = new THREE.BoxGeometry(0.025, 0.025, 0.01);
+  const earGeom = new THREE.SphereGeometry(0.035, 8, 6);
+  const earL = new THREE.Mesh(earGeom, skinMat);
+  earL.position.set(-0.18, 1.3, 0);
+  earL.castShadow = true;
+  playerGroup.add(earL);
+  const earR = new THREE.Mesh(earGeom, skinMat);
+  earR.position.set(0.18, 1.3, 0);
+  earR.castShadow = true;
+  playerGroup.add(earR);
+
+  const noseGeom = new THREE.SphereGeometry(0.022, 8, 6);
+  const nose = new THREE.Mesh(noseGeom, skinMat);
+  nose.position.set(0, 1.3, -0.18);
+  nose.scale.set(0.9, 1.1, 1);
+  playerGroup.add(nose);
+
+  const eyeGeom = new THREE.SphereGeometry(0.024, 8, 6);
   const eyeMat = new THREE.MeshBasicMaterial({ color: 0x1a1a1a });
-  const eyeL = new THREE.Mesh(eyeGeom, eyeMat);
-  eyeL.position.set(-0.06, 1.34, -0.16);
-  playerGroup.add(eyeL);
-  const eyeR = new THREE.Mesh(eyeGeom, eyeMat);
-  eyeR.position.set(0.06, 1.34, -0.16);
-  playerGroup.add(eyeR);
+  playerEyeL = new THREE.Mesh(eyeGeom, eyeMat);
+  playerEyeL.position.set(-0.06, 1.36, -0.16);
+  playerEyeL.scale.set(1, 1, 0.4);
+  playerGroup.add(playerEyeL);
+  playerEyeR = new THREE.Mesh(eyeGeom, eyeMat);
+  playerEyeR.position.set(0.06, 1.36, -0.16);
+  playerEyeR.scale.set(1, 1, 0.4);
+  playerGroup.add(playerEyeR);
+
+  if (app.gender === 'f') {
+    const blushMat = new THREE.MeshBasicMaterial({ color: 0xf48a8a, transparent: true, opacity: 0.55 });
+    const blushL = new THREE.Mesh(new THREE.SphereGeometry(0.04, 10, 8), blushMat);
+    blushL.position.set(-0.13, 1.31, -0.14); blushL.scale.set(1, 0.5, 0.4);
+    playerGroup.add(blushL);
+    const blushR = new THREE.Mesh(new THREE.SphereGeometry(0.04, 10, 8), blushMat);
+    blushR.position.set(0.13, 1.31, -0.14); blushR.scale.set(1, 0.5, 0.4);
+    playerGroup.add(blushR);
+  }
+
+  const mouthMat = new THREE.MeshBasicMaterial({ color: 0xc06868 });
+  const mouth = new THREE.Mesh(rb(0.05, 0.012, 0.005, 0.002), mouthMat);
+  mouth.position.set(0, 1.27, -0.17);
+  playerGroup.add(mouth);
 
   playerGroup.position.set(state.player.x + 0.5, 0, state.player.y + 0.5);
   playerGroup.rotation.y = Math.PI;
@@ -955,6 +1066,16 @@ function updateDayNight() {
     if (dayFactor > 0.5) win.material.color.setHex(0x7ec0e8);
     else if (dayFactor > 0.2) win.material.color.setHex(0xe89868);
     else win.material.color.setHex(0xfdd585);
+  }
+
+  const lampOn = 1 - dayFactor;
+  for (const lp of lampLights) {
+    lp.light.intensity = lampOn * 1.6;
+    if (lp.bulb && lp.bulb.material) {
+      const c = new THREE.Color(lp.baseColor);
+      const dim = new THREE.Color(0x3a3530);
+      lp.bulb.material.color.copy(dim).lerp(c, lampOn);
+    }
   }
 }
 
