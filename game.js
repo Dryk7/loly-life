@@ -1262,6 +1262,8 @@ function buildExterior() {
   }
 
   buildPark();
+  buildTrafficLight(cx + 1, STREET_Z + STREET_W + 1);
+  buildBicycles();
 
   const mailboxMat = new THREE.MeshStandardMaterial({ color: 0x2a4a78, roughness: 0.6, metalness: 0.3 });
   const mailboxFlagMat = new THREE.MeshStandardMaterial({ color: 0xe85b5b });
@@ -2087,7 +2089,158 @@ function checkRandomEvents() {
   }
 }
 
-function buildPark() {
+let trafficLightHeads = null;
+let trafficLightPhase = 0;
+
+function buildTrafficLight(x, z) {
+  const postMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.7, metalness: 0.4 });
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 3.6, 8), postMat);
+  post.position.set(x, 1.2, z);
+  post.castShadow = true;
+  scene.add(post);
+  const arm = new THREE.Mesh(rb(0.05, 0.05, 0.6, 0.01), postMat);
+  arm.position.set(x, 2.85, z - 0.25);
+  scene.add(arm);
+  const housing = new THREE.Mesh(rb(0.22, 0.7, 0.22, 0.04), postMat);
+  housing.position.set(x, 2.55, z - 0.5);
+  scene.add(housing);
+  const redMat = new THREE.MeshStandardMaterial({ color: 0x4a1010, emissive: 0x000000, emissiveIntensity: 0 });
+  const orangeMat = new THREE.MeshStandardMaterial({ color: 0x4a3010, emissive: 0x000000, emissiveIntensity: 0 });
+  const greenMat = new THREE.MeshStandardMaterial({ color: 0x103a1a, emissive: 0x000000, emissiveIntensity: 0 });
+  const red = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), redMat);
+  red.position.set(x, 2.78, z - 0.62);
+  scene.add(red);
+  const orange = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), orangeMat);
+  orange.position.set(x, 2.55, z - 0.62);
+  scene.add(orange);
+  const green = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), greenMat);
+  green.position.set(x, 2.32, z - 0.62);
+  scene.add(green);
+  trafficLightHeads = { red, orange, green };
+}
+
+function tickTrafficLight(dt) {
+  if (!trafficLightHeads) return;
+  trafficLightPhase = (trafficLightPhase + dt) % 12;
+  const t = trafficLightPhase;
+  const setLight = (mesh, on, color) => {
+    if (on) {
+      mesh.material.color.setHex(color);
+      mesh.material.emissive.setHex(color);
+      mesh.material.emissiveIntensity = 1.2;
+    } else {
+      mesh.material.emissiveIntensity = 0;
+      mesh.material.color.setHex(color === 0xff3a1a ? 0x4a1010 : color === 0xfdc848 ? 0x4a3010 : 0x103a1a);
+    }
+  };
+  if (t < 5) {
+    setLight(trafficLightHeads.red, false, 0xff3a1a);
+    setLight(trafficLightHeads.orange, false, 0xfdc848);
+    setLight(trafficLightHeads.green, true, 0x3aff5a);
+  } else if (t < 7) {
+    setLight(trafficLightHeads.red, false, 0xff3a1a);
+    setLight(trafficLightHeads.orange, true, 0xfdc848);
+    setLight(trafficLightHeads.green, false, 0x3aff5a);
+  } else {
+    setLight(trafficLightHeads.red, true, 0xff3a1a);
+    setLight(trafficLightHeads.orange, false, 0xfdc848);
+    setLight(trafficLightHeads.green, false, 0x3aff5a);
+  }
+}
+
+let bicycles = [];
+function buildBicycles() {
+  const cx = COLS / 2;
+  const STREET_Z = 22;
+  for (let i = 0; i < 2; i++) {
+    const grp = new THREE.Group();
+    const frameMat = new THREE.MeshStandardMaterial({ color: i === 0 ? 0x4ac0e8 : 0xe85b5b, roughness: 0.5, metalness: 0.7 });
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.7 });
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0xfbc8a8, roughness: 0.85 });
+    const shirtMat = new THREE.MeshStandardMaterial({ color: i === 0 ? 0xfdc848 : 0x7da85b, roughness: 0.8 });
+    const pantsMat = new THREE.MeshStandardMaterial({ color: 0x3c4a5c, roughness: 0.8 });
+
+    const frame1 = new THREE.Mesh(rb(0.05, 0.05, 0.7, 0.01), frameMat);
+    frame1.position.set(0, 0.1, 0);
+    frame1.rotation.x = 0.3;
+    grp.add(frame1);
+    const seat = new THREE.Mesh(rb(0.15, 0.05, 0.08, 0.01), new THREE.MeshStandardMaterial({ color: 0x2a2a2a }));
+    seat.position.set(0.3, 0.32, 0);
+    grp.add(seat);
+    const wheelGeom = new THREE.TorusGeometry(0.22, 0.04, 6, 16);
+    const wheelF = new THREE.Mesh(wheelGeom, wheelMat);
+    wheelF.position.set(-0.4, 0, 0); wheelF.rotation.y = Math.PI / 2;
+    wheelF.castShadow = true;
+    grp.add(wheelF);
+    const wheelB = new THREE.Mesh(wheelGeom, wheelMat);
+    wheelB.position.set(0.4, 0, 0); wheelB.rotation.y = Math.PI / 2;
+    wheelB.castShadow = true;
+    grp.add(wheelB);
+
+    const torso = new THREE.Mesh(rb(0.32, 0.4, 0.18, 0.04), shirtMat);
+    torso.position.set(0.3, 0.7, 0);
+    torso.castShadow = true;
+    grp.add(torso);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 10), skinMat);
+    head.position.set(0.3, 1.05, 0);
+    head.castShadow = true;
+    grp.add(head);
+    const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), new THREE.MeshStandardMaterial({ color: 0x4a3520, roughness: 0.3, metalness: 0.5 }));
+    helmet.position.set(0.3, 1.07, 0);
+    grp.add(helmet);
+    const armL = new THREE.Mesh(rb(0.08, 0.32, 0.08, 0.03), skinMat);
+    armL.position.set(0, 0.7, -0.12);
+    armL.rotation.x = 0.3; armL.rotation.z = -0.4;
+    grp.add(armL);
+    const armR = new THREE.Mesh(rb(0.08, 0.32, 0.08, 0.03), skinMat);
+    armR.position.set(0, 0.7, 0.12);
+    armR.rotation.x = 0.3; armR.rotation.z = -0.4;
+    grp.add(armR);
+    const handlebar = new THREE.Mesh(rb(0.04, 0.04, 0.36, 0.005), frameMat);
+    handlebar.position.set(-0.3, 0.55, 0);
+    grp.add(handlebar);
+
+    grp.position.set(i === 0 ? -22 : 18, 0.25, STREET_Z + 1.5 + i * (STREET_W - 3));
+    grp.rotation.y = i === 0 ? -Math.PI / 2 : Math.PI / 2;
+    scene.add(grp);
+    bicycles.push({ group: grp, dir: i === 0 ? 1 : -1, lane: STREET_Z + 1.5 + i * (STREET_W - 3), speed: 2.0, wheelF, wheelB });
+  }
+}
+
+function tickBicycles(dt) {
+  for (const b of bicycles) {
+    b.group.position.x += b.dir * b.speed * dt;
+    b.wheelF.rotation.x += b.dir * b.speed * 5 * dt;
+    b.wheelB.rotation.x += b.dir * b.speed * 5 * dt;
+    if (b.dir > 0 && b.group.position.x > 24) b.group.position.x = -24;
+    else if (b.dir < 0 && b.group.position.x < -24) b.group.position.x = 24;
+  }
+}
+
+let umbrellas = [];
+function ensureUmbrellas() {
+  const isRain = state.weather === 'rainy' || state.weather === 'storm';
+  if (isRain) {
+    if (umbrellas.length === 0 && pedestrians.length > 0) {
+      for (const p of pedestrians) {
+        const colors = [0xa85b5b, 0x4a6ba8, 0x5b8aaf, 0x7da85b, 0xc8a5d8];
+        const umat = new THREE.MeshStandardMaterial({ color: colors[Math.floor(Math.random() * colors.length)], roughness: 0.7 });
+        const umbrella = new THREE.Mesh(new THREE.ConeGeometry(0.45, 0.25, 12, 1, false), umat);
+        umbrella.position.set(0, 1.85, 0);
+        umbrella.castShadow = true;
+        const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.5, 6), new THREE.MeshStandardMaterial({ color: 0x2a2a2a }));
+        stick.position.set(0, 1.55, 0);
+        const grp = new THREE.Group();
+        grp.add(umbrella); grp.add(stick);
+        p.add(grp);
+        umbrellas.push({ group: grp, ped: p });
+      }
+    }
+    for (const u of umbrellas) u.group.visible = true;
+  } else {
+    for (const u of umbrellas) u.group.visible = false;
+  }
+}
   const cx = COLS / 2;
   const PARK_Z = -10;
 
@@ -3596,6 +3749,9 @@ function tick(dt) {
   tickWeatherParticles(dt);
   tickMovingCars(dt);
   tickPedestrians(dt);
+  tickBicycles(dt);
+  tickTrafficLight(dt);
+  ensureUmbrellas();
   checkAchievements();
 
   saveAccum += dt;
