@@ -36,6 +36,49 @@ const ZONES = [
   { name: 'terrace', x0: 0, y0: 13, x1: 10, y1: 18, color: 0x8c6440, outdoor: true, pattern: 'wood' },
 ];
 
+function makeWallTexture(hex, accent) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 96;
+  const ctx = c.getContext('2d');
+  const r = (hex >> 16) & 0xff, g = (hex >> 8) & 0xff, b = hex & 0xff;
+  ctx.fillStyle = `rgb(${r},${g},${b})`;
+  ctx.fillRect(0, 0, 96, 96);
+  ctx.fillStyle = `rgba(255,255,255,0.04)`;
+  for (let i = 0; i < 96; i += 12) ctx.fillRect(i, 0, 1, 96);
+  for (let i = 0; i < 360; i++) {
+    const x = Math.random() * 96, y = Math.random() * 96;
+    ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.06})`;
+    ctx.fillRect(x, y, 1, 1);
+  }
+  if (accent) {
+    ctx.fillStyle = `rgba(0,0,0,0.18)`;
+    ctx.fillRect(0, 78, 96, 1);
+    ctx.fillStyle = `rgba(255,255,255,0.08)`;
+    ctx.fillRect(0, 80, 96, 1);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function makeSkyTexture() {
+  const c = document.createElement('canvas');
+  c.width = 32; c.height = 256;
+  const ctx = c.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, 256);
+  grad.addColorStop(0, '#1a1428');
+  grad.addColorStop(0.4, '#3a2a52');
+  grad.addColorStop(0.7, '#5a3a4a');
+  grad.addColorStop(1, '#a86a4a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 32, 256);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 function makeFloorTexture(hex, pattern) {
   const c = document.createElement('canvas');
   c.width = c.height = 96;
@@ -547,8 +590,12 @@ function buildWorld() {
     scene.add(mesh);
   }
 
-  const wallMat = new THREE.MeshLambertMaterial({ color: 0x8b6f47 });
-  const innerWallMat = new THREE.MeshLambertMaterial({ color: 0xb89568 });
+  const wallTex = makeWallTexture(0xb89878, true);
+  wallTex.repeat.set(1, 1.5);
+  const innerWallTex = makeWallTexture(0xd8b890, false);
+  innerWallTex.repeat.set(1, 1);
+  const wallMat = new THREE.MeshLambertMaterial({ map: wallTex });
+  const innerWallMat = new THREE.MeshLambertMaterial({ map: innerWallTex });
   const wallH = 2.2;
   const innerWallH = 1.4;
   const wallGeom = new THREE.BoxGeometry(1, wallH, 1);
@@ -631,6 +678,96 @@ function buildWorld() {
 
   buildLamps();
   buildTerrace();
+  buildSunBeams();
+  buildDustParticles();
+}
+
+let sunBeams = [];
+function buildSunBeams() {
+  const beamMat = new THREE.MeshBasicMaterial({
+    color: 0xfff0c8,
+    transparent: true,
+    opacity: 0,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  for (const wp of [{ x: 2, z: 0 }, { x: 7, z: 0 }]) {
+    const beam = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 5.5), beamMat.clone());
+    beam.position.set(wp.x + 0.5, 1.2, wp.z + 2.5);
+    beam.rotation.x = -Math.PI / 2.2;
+    beam.rotation.z = 0.05;
+    scene.add(beam);
+    sunBeams.push(beam);
+
+    const beam2 = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 5.5), beamMat.clone());
+    beam2.position.set(wp.x + 0.5, 1.2, wp.z + 2.5);
+    beam2.rotation.x = -Math.PI / 2.2;
+    beam2.rotation.z = -0.05;
+    beam2.rotation.y = Math.PI / 8;
+    scene.add(beam2);
+    sunBeams.push(beam2);
+  }
+}
+
+let dustParticles = null;
+function buildDustParticles() {
+  const count = 140;
+  const geom = new THREE.BufferGeometry();
+  const pos = new Float32Array(count * 3);
+  const drift = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    pos[i * 3] = Math.random() * COLS;
+    pos[i * 3 + 1] = 0.5 + Math.random() * 1.8;
+    pos[i * 3 + 2] = Math.random() * APT_ROWS;
+    drift[i * 3] = (Math.random() - 0.5) * 0.05;
+    drift[i * 3 + 1] = (Math.random() - 0.3) * 0.04;
+    drift[i * 3 + 2] = (Math.random() - 0.5) * 0.05;
+  }
+  geom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const mat = new THREE.PointsMaterial({
+    color: 0xfff5d0,
+    size: 0.06,
+    transparent: true,
+    opacity: 0.45,
+    sizeAttenuation: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  dustParticles = new THREE.Points(geom, mat);
+  dustParticles.userData.drift = drift;
+  scene.add(dustParticles);
+}
+
+function tickIdleAnim(dt) {
+  if (!playerGroup || state.action || (state.path && state.path.length)) return;
+  const t = performance.now() / 1000;
+  const breath = 1 + Math.sin(t * 1.4) * 0.015;
+  if (playerHead) playerHead.scale.set(1, breath, 1);
+  if (playerEyeL && playerEyeR) {
+    const blinkPhase = (t % 4) / 4;
+    const blink = blinkPhase < 0.04 ? 0.1 : 1;
+    playerEyeL.scale.y = blink;
+    playerEyeR.scale.y = blink;
+  }
+}
+
+function tickDust(dt) {
+  if (!dustParticles) return;
+  const pos = dustParticles.geometry.attributes.position.array;
+  const drift = dustParticles.userData.drift;
+  for (let i = 0; i < pos.length; i += 3) {
+    pos[i] += drift[i] * dt;
+    pos[i + 1] += drift[i + 1] * dt;
+    pos[i + 2] += drift[i + 2] * dt;
+    if (pos[i + 1] > 2.4) pos[i + 1] = 0.4;
+    if (pos[i + 1] < 0.3) pos[i + 1] = 2.3;
+    if (pos[i] < 0.5) pos[i] = COLS - 0.5;
+    if (pos[i] > COLS - 0.5) pos[i] = 0.5;
+    if (pos[i + 2] < 0.5) pos[i + 2] = APT_ROWS - 0.5;
+    if (pos[i + 2] > APT_ROWS - 0.5) pos[i + 2] = 0.5;
+  }
+  dustParticles.geometry.attributes.position.needsUpdate = true;
 }
 
 function buildFrontDoor() {
@@ -1924,6 +2061,8 @@ function tick(dt) {
   updateDayNight();
   updateFlickers();
   tickCat(dt);
+  tickDust(dt);
+  tickIdleAnim(dt);
 
   saveAccum += dt;
   if (saveAccum > 8) { saveAccum = 0; saveGame(); }
@@ -1990,6 +2129,13 @@ function updateDayNight() {
       const dim = new THREE.Color(0x3a3530);
       lp.bulb.material.color.copy(dim).lerp(c, lampOn);
     }
+  }
+
+  for (const b of sunBeams) {
+    b.material.opacity = dayFactor * 0.22;
+  }
+  if (dustParticles) {
+    dustParticles.material.opacity = 0.15 + dayFactor * 0.35;
   }
 }
 
