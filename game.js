@@ -11,10 +11,13 @@ function rb(w, h, d, r = 0.05, segs = 2) {
   return new RoundedBoxGeometry(w, h, d, segs, Math.min(r, w / 2 - 0.001, h / 2 - 0.001, d / 2 - 0.001));
 }
 function lamMat(color, opts = {}) {
-  return new THREE.MeshLambertMaterial({
+  return new THREE.MeshStandardMaterial({
     color,
+    roughness: opts.roughness ?? 0.78,
+    metalness: opts.metalness ?? 0.05,
     emissive: opts.emissive || 0x000000,
     emissiveIntensity: opts.emissiveIntensity || 0,
+    envMapIntensity: opts.envMapIntensity ?? 0.4,
   });
 }
 
@@ -167,6 +170,49 @@ function updateSkyDome() {
   const azRad = THREE.MathUtils.degToRad(az);
   _sunVec.set(Math.sin(azRad) * Math.cos(elev * Math.PI / 2), Math.sin(elev * Math.PI / 2), Math.cos(azRad) * Math.cos(elev * Math.PI / 2));
   u.sunDir.value.copy(_sunVec.normalize());
+}
+
+function makeNormalMap(pattern) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 96;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = 'rgb(128,128,255)';
+  ctx.fillRect(0, 0, 96, 96);
+  if (pattern === 'tile') {
+    ctx.fillStyle = 'rgb(80,128,200)';
+    for (let i = 0; i <= 96; i += 32) {
+      ctx.fillRect(i - 1, 0, 2, 96);
+      ctx.fillRect(0, i - 1, 96, 2);
+    }
+    ctx.fillStyle = 'rgb(176,128,200)';
+    for (let i = 0; i <= 96; i += 32) {
+      ctx.fillRect(i + 1, 0, 1, 96);
+      ctx.fillRect(0, i + 1, 96, 1);
+    }
+  } else if (pattern === 'wood') {
+    for (let i = 0; i < 96; i += 24) {
+      ctx.fillStyle = 'rgb(90,128,200)';
+      ctx.fillRect(i, 0, 1, 96);
+      ctx.fillStyle = 'rgb(170,128,210)';
+      ctx.fillRect(i + 1, 0, 1, 96);
+    }
+    for (let i = 0; i < 80; i++) {
+      const x = Math.random() * 96, y = Math.random() * 96;
+      ctx.fillStyle = `rgb(${110 + Math.random() * 50},128,${200 + Math.random() * 30})`;
+      ctx.fillRect(x, y, 1, 8);
+    }
+  } else if (pattern === 'carpet') {
+    for (let i = 0; i < 1500; i++) {
+      const x = Math.random() * 96, y = Math.random() * 96;
+      const v = Math.random() * 80 + 80;
+      ctx.fillStyle = `rgb(${v}, ${v}, 220)`;
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  return tex;
 }
 
 function makeFloorTexture(hex, pattern) {
@@ -678,25 +724,75 @@ function init3D() {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.NoToneMapping;
-  renderer.toneMappingExposure = 1.0;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
+
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  pmrem.compileEquirectangularShader();
+  const envScene = new THREE.Scene();
+  envScene.background = new THREE.Color(0x9bbac8);
+  const envHemi = new THREE.HemisphereLight(0xfff5d0, 0x4a3a30, 1);
+  envScene.add(envHemi);
+  const envTex = pmrem.fromScene(envScene, 0.04).texture;
+  scene.environment = envTex;
+  pmrem.dispose();
 
   composer = new EffectComposer(renderer);
   composer.setSize(w, h);
   composer.addPass(new RenderPass(scene, camera));
-  bloomPass = new UnrealBloomPass(new THREE.Vector2(w, h), 0.7, 0.4, 0.85);
+  bloomPass = new UnrealBloomPass(new THREE.Vector2(w, h), 0.55, 0.45, 0.82);
   composer.addPass(bloomPass);
+
+  const gradeShader = {
+    uniforms: {
+      tDiffuse: { value: null },
+      vignetteStrength: { value: 0.55 },
+      vignetteSoftness: { value: 0.4 },
+      saturation: { value: 1.12 },
+      contrast: { value: 1.08 },
+      shadowTint: { value: new THREE.Color(0.95, 0.95, 1.0) },
+      highlightTint: { value: new THREE.Color(1.05, 1.0, 0.95) },
+    },
+    vertexShader: /* glsl */`
+      varying vec2 vUv;
+      void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
+    `,
+    fragmentShader: /* glsl */`
+      uniform sampler2D tDiffuse;
+      uniform float vignetteStrength;
+      uniform float vignetteSoftness;
+      uniform float saturation;
+      uniform float contrast;
+      uniform vec3 shadowTint;
+      uniform vec3 highlightTint;
+      varying vec2 vUv;
+      void main() {
+        vec4 col = texture2D(tDiffuse, vUv);
+        float lum = dot(col.rgb, vec3(0.299, 0.587, 0.114));
+        col.rgb = mix(vec3(lum), col.rgb, saturation);
+        col.rgb = (col.rgb - 0.5) * contrast + 0.5;
+        col.rgb *= mix(shadowTint, highlightTint, smoothstep(0.0, 1.0, lum));
+        vec2 d = vUv - 0.5;
+        float r = dot(d, d) * 1.6;
+        float v = smoothstep(vignetteSoftness, vignetteSoftness + vignetteStrength, r);
+        col.rgb *= 1.0 - v * 0.7;
+        gl_FragColor = vec4(col.rgb, col.a);
+      }
+    `,
+  };
+  composer.addPass(new ShaderPass(gradeShader));
+
   fxaaPass = new ShaderPass(FXAAShader);
   fxaaPass.material.uniforms['resolution'].value.set(1 / (w * renderer.getPixelRatio()), 1 / (h * renderer.getPixelRatio()));
   composer.addPass(fxaaPass);
   composer.addPass(new OutputPass());
 
-  scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 
-  hemi = new THREE.HemisphereLight(0xffeec0, 0xa48564, 0.85);
+  hemi = new THREE.HemisphereLight(0xffeec0, 0xa48564, 1.4);
   scene.add(hemi);
 
-  sun = new THREE.DirectionalLight(0xfff0c8, 1.4);
+  sun = new THREE.DirectionalLight(0xfff0c8, 2.4);
   sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024);
   sun.shadow.camera.near = 0.1;
@@ -748,7 +844,16 @@ function buildWorld() {
     const geom = new THREE.PlaneGeometry(w, h);
     const tex = makeFloorTexture(zone.color, zone.pattern || 'carpet');
     tex.repeat.set(w, h);
-    const mat = new THREE.MeshLambertMaterial({ map: tex });
+    const norm = makeNormalMap(zone.pattern || 'carpet');
+    norm.repeat.set(w, h);
+    const mat = new THREE.MeshStandardMaterial({
+      map: tex,
+      normalMap: norm,
+      normalScale: new THREE.Vector2(0.6, 0.6),
+      roughness: zone.pattern === 'tile' ? 0.4 : (zone.pattern === 'wood' ? 0.7 : 0.9),
+      metalness: 0.02,
+      envMapIntensity: 0.3,
+    });
     const mesh = new THREE.Mesh(geom, mat);
     mesh.rotation.x = -Math.PI / 2;
     mesh.position.set(zone.x0 + w / 2, 0.01, zone.y0 + h / 2);
@@ -760,8 +865,12 @@ function buildWorld() {
   wallTex.repeat.set(1, 1.5);
   const innerWallTex = makeWallTexture(0xd8b890, false);
   innerWallTex.repeat.set(1, 1);
-  const wallMat = new THREE.MeshLambertMaterial({ map: wallTex });
-  const innerWallMat = new THREE.MeshLambertMaterial({ map: innerWallTex });
+  const wallMat = new THREE.MeshStandardMaterial({
+    map: wallTex, roughness: 0.95, metalness: 0.02, envMapIntensity: 0.3,
+  });
+  const innerWallMat = new THREE.MeshStandardMaterial({
+    map: innerWallTex, roughness: 0.85, metalness: 0.02, envMapIntensity: 0.3,
+  });
   const wallH = 2.2;
   const innerWallH = 1.4;
   const wallGeom = new THREE.BoxGeometry(1, wallH, 1);
@@ -3008,9 +3117,9 @@ function updateDayNight() {
     else dayFactor = 1;
   }
 
-  sun.intensity = 0.15 + dayFactor * 1.35;
-  hemi.intensity = 0.45 + dayFactor * 0.7;
-  ambientNight.intensity = (1 - dayFactor) * 1.5;
+  sun.intensity = 0.2 + dayFactor * 2.4;
+  hemi.intensity = 0.55 + dayFactor * 1.0;
+  ambientNight.intensity = (1 - dayFactor) * 2.0;
 
   let sky = 0x1a1428;
   if (dayFactor > 0.7) sky = 0x6a92c0;
