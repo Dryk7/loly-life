@@ -844,13 +844,110 @@ function init3D() {
   canvasEl.addEventListener('pointerdown', onPointerDown);
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', onResize);
+  setupCameraControls();
 }
 
+let cameraZoom = 1;
+let cameraPanX = 0;
+let cameraPanZ = 0;
+const BASE_FRUSTUM = 9.5;
+
 function positionCamera() {
-  const cx = COLS / 2;
-  const cz = 10;
+  const cx = COLS / 2 + cameraPanX;
+  const cz = 10 + cameraPanZ;
   camera.position.set(cx + 13, 18, cz + 13);
   camera.lookAt(cx, 0.5, cz);
+}
+
+const _activeTouches = new Map();
+let _pinchStartDist = 0;
+let _pinchStartZoom = 1;
+let _panStart = null;
+let _isPinching = false;
+let _isPanning = false;
+
+function setupCameraControls() {
+  canvasEl.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    cameraZoom = Math.max(0.5, Math.min(2.5, cameraZoom + delta));
+    applyCameraZoom();
+  }, { passive: false });
+
+  canvasEl.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      _isPinching = true;
+      _isPanning = false;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      _pinchStartDist = Math.hypot(dx, dy);
+      _pinchStartZoom = cameraZoom;
+    }
+  }, { passive: false });
+
+  canvasEl.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2 && _isPinching) {
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      cameraZoom = Math.max(0.5, Math.min(2.5, _pinchStartZoom * (dist / _pinchStartDist)));
+      applyCameraZoom();
+    }
+  }, { passive: false });
+
+  canvasEl.addEventListener('touchend', (e) => {
+    if (e.touches.length < 2) {
+      _isPinching = false;
+    }
+  });
+
+  canvasEl.addEventListener('contextmenu', e => e.preventDefault());
+  canvasEl.addEventListener('mousedown', (e) => {
+    if (e.button === 2) {
+      e.preventDefault();
+      _isPanning = true;
+      _panStart = { x: e.clientX, y: e.clientY, panX: cameraPanX, panZ: cameraPanZ };
+    }
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (_isPanning && _panStart) {
+      const dx = e.clientX - _panStart.x;
+      const dy = e.clientY - _panStart.y;
+      const factor = 0.04 / cameraZoom;
+      cameraPanX = _panStart.panX - (dx + dy) * factor;
+      cameraPanZ = _panStart.panZ + (dy - dx) * factor;
+      cameraPanX = Math.max(-15, Math.min(15, cameraPanX));
+      cameraPanZ = Math.max(-15, Math.min(15, cameraPanZ));
+      positionCamera();
+    }
+  });
+  window.addEventListener('mouseup', () => { _isPanning = false; _panStart = null; });
+
+  document.querySelectorAll('.cam-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const action = btn.dataset.cam;
+      if (action === 'zoomin') cameraZoom = Math.min(2.5, cameraZoom + 0.2);
+      else if (action === 'zoomout') cameraZoom = Math.max(0.5, cameraZoom - 0.2);
+      else if (action === 'recenter') { cameraZoom = 1; cameraPanX = 0; cameraPanZ = 0; }
+      applyCameraZoom();
+    });
+  });
+}
+
+function applyCameraZoom() {
+  if (!camera) return;
+  const stage = document.getElementById('stage');
+  const w = stage.clientWidth, h = stage.clientHeight;
+  const aspect = w / h;
+  const d = BASE_FRUSTUM / cameraZoom;
+  camera.left = -d * aspect;
+  camera.right = d * aspect;
+  camera.top = d;
+  camera.bottom = -d;
+  camera.updateProjectionMatrix();
+  positionCamera();
 }
 
 function buildWorld() {
@@ -3539,6 +3636,8 @@ function updatePlayerFacing(dir) {
 }
 
 function onPointerDown(e) {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  if (_isPinching || _isPanning) return;
   if (state.action && !state.buildMode && !state.demolishMode) return;
   const rect = canvasEl.getBoundingClientRect();
   pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -3658,16 +3757,10 @@ function onResize() {
   if (!gameEl || gameEl.hidden) return;
   const stage = document.getElementById('stage');
   const w = stage.clientWidth, h = stage.clientHeight;
-  const aspect = w / h;
-  const d = 9.5;
-  camera.left = -d * aspect;
-  camera.right = d * aspect;
-  camera.top = d;
-  camera.bottom = -d;
-  camera.updateProjectionMatrix();
   renderer.setSize(w, h, false);
   if (composer) composer.setSize(w, h);
   if (fxaaPass) fxaaPass.material.uniforms['resolution'].value.set(1 / (w * renderer.getPixelRatio()), 1 / (h * renderer.getPixelRatio()));
+  applyCameraZoom();
 }
 
 let saveAccum = 0;
