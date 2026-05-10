@@ -397,17 +397,17 @@ function addFloorLamp(x, z, color) {
   const group = new THREE.Group();
   group.position.set(x, 0, z);
   const baseMat = lamMat(0x2a2a2a);
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.18, 0.04, 12), baseMat);
-  base.position.y = 0.02; base.receiveShadow = true; group.add(base);
-  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.6, 8), baseMat);
-  post.position.y = 0.85; post.castShadow = true; group.add(post);
-  const shadeMat = lamMat(0xf5e6c8);
-  const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.28, 16, 1, true), shadeMat);
-  shade.position.y = 1.55; shadeMat.side = THREE.DoubleSide; group.add(shade);
-  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 8), new THREE.MeshBasicMaterial({ color }));
-  bulb.position.y = 1.5; group.add(bulb);
-  const light = new THREE.PointLight(color, 0, 5, 1.6);
-  light.position.y = 1.5; light.castShadow = false; group.add(light);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.06, 12), baseMat);
+  base.position.y = 0.03; base.receiveShadow = true; group.add(base);
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.45, 8), baseMat);
+  post.position.y = 0.78; post.castShadow = true; group.add(post);
+  const shadeMat = lamMat(0xf5d8a8);
+  const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.32, 0.32, 16, 1, true), shadeMat);
+  shade.position.y = 1.5; shadeMat.side = THREE.DoubleSide; shade.castShadow = true; group.add(shade);
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.1, 14, 10), new THREE.MeshBasicMaterial({ color }));
+  bulb.position.y = 1.45; group.add(bulb);
+  const light = new THREE.PointLight(color, 0, 6, 1.4);
+  light.position.y = 1.4; light.castShadow = false; group.add(light);
   scene.add(group);
   lampLights.push({ light, bulb, baseColor: color });
 }
