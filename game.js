@@ -107,39 +107,114 @@ const APPEARANCE_PALETTES = {
     { id: 'm', label: 'Homme' },
     { id: 'n', label: 'Autre' },
   ],
+  bodyHeight: [
+    { id: 'short', label: 'Petit' },
+    { id: 'normal', label: 'Normal' },
+    { id: 'tall', label: 'Grand' },
+  ],
+  bodyShape: [
+    { id: 'slim', label: 'Mince' },
+    { id: 'normal', label: 'Normal' },
+    { id: 'athletic', label: 'Sportif' },
+    { id: 'curvy', label: 'Rondelet' },
+  ],
   skin: ['#fde0c8', '#fbc8a8', '#e8ad88', '#b88660', '#8a5e40', '#5e3e2c'],
-  hair: ['#1a1a1a', '#5c3d1e', '#a87544', '#d8b878', '#c45a3a', '#7d6e90', '#e8a8c8'],
+  hair: ['#1a1a1a', '#5c3d1e', '#a87544', '#d8b878', '#c45a3a', '#7d6e90', '#e8a8c8', '#5b8a4a', '#3a4a8a'],
   hairStyle: [
     { id: 'short', label: 'Court' },
     { id: 'long', label: 'Long' },
     { id: 'tuft', label: 'Crête' },
+    { id: 'bun', label: 'Chignon' },
+    { id: 'curly', label: 'Bouclé' },
     { id: 'bald', label: 'Rasé' },
+  ],
+  eyeColor: ['#1a1a1a', '#3a4a6a', '#4a8a3a', '#8b4a2a', '#7a4a8a', '#3a8aaa', '#a85a3a', '#a8a8a8'],
+  eyebrow: [
+    { id: 'thin', label: 'Fins' },
+    { id: 'normal', label: 'Naturels' },
+    { id: 'thick', label: 'Épais' },
+    { id: 'arched', label: 'Arqués' },
+  ],
+  facialHair: [
+    { id: 'none', label: 'Aucune' },
+    { id: 'mustache', label: 'Moustache' },
+    { id: 'goatee', label: 'Bouc' },
+    { id: 'beard', label: 'Barbe' },
+  ],
+  glasses: [
+    { id: 'none', label: 'Aucunes' },
+    { id: 'round', label: 'Rondes' },
+    { id: 'square', label: 'Carrées' },
+    { id: 'sun', label: 'Soleil' },
+  ],
+  hat: [
+    { id: 'none', label: 'Aucun' },
+    { id: 'cap', label: 'Casquette' },
+    { id: 'beanie', label: 'Bonnet' },
+    { id: 'beret', label: 'Béret' },
+    { id: 'fedora', label: 'Fedora' },
+  ],
+  earring: [
+    { id: 'none', label: 'Aucune' },
+    { id: 'stud', label: 'Clous' },
+    { id: 'hoop', label: 'Anneaux' },
   ],
   top: [
     { id: 'tshirt', label: 'T-shirt' },
     { id: 'pull', label: 'Pull' },
     { id: 'tank', label: 'Débard.' },
+    { id: 'hoodie', label: 'Hoodie' },
     { id: 'robe', label: 'Robe' },
   ],
-  shirt: ['#5b8aaf', '#a85b5b', '#7da85b', '#a87544', '#5b5b8a', '#c8a5d8', '#3a3a3a', '#e8a857'],
+  shirt: ['#5b8aaf', '#a85b5b', '#7da85b', '#a87544', '#5b5b8a', '#c8a5d8', '#3a3a3a', '#e8a857', '#fdc848', '#3aa898'],
   bottom: [
     { id: 'pants', label: 'Pantalon' },
     { id: 'short', label: 'Short' },
     { id: 'skirt', label: 'Jupe' },
+    { id: 'jeans', label: 'Jean' },
   ],
-  pants: ['#3c4a5c', '#5c3d1e', '#3c5c3c', '#5c3c5c', '#1a1a1a', '#a87544'],
+  pants: ['#3c4a5c', '#5c3d1e', '#3c5c3c', '#5c3c5c', '#1a1a1a', '#a87544', '#6b85a8', '#8a4a6a'],
+  shoes: [
+    { id: 'sneakers', label: 'Baskets' },
+    { id: 'boots', label: 'Bottes' },
+    { id: 'sandals', label: 'Sandales' },
+    { id: 'formal', label: 'Mocassins' },
+  ],
+  shoeColor: ['#1a1a1a', '#5c3d1e', '#ffffff', '#a85b5b', '#3c5c8a'],
 };
+
+const TRAITS = [
+  { id: 'noctambule', label: '🌙 Noctambule', desc: 'Plus en forme la nuit, plus fatigué le jour' },
+  { id: 'gourmand', label: '🍰 Gourmand', desc: 'Manger restaure 50% de Faim en plus' },
+  { id: 'casanier', label: '🏠 Casanier', desc: 'Social descend lentement, Fun monte à la maison' },
+  { id: 'sportif', label: '💪 Sportif', desc: 'Énergie monte plus vite, fatigue plus lente' },
+  { id: 'sociable', label: '💬 Sociable', desc: 'Appels et interactions boostés' },
+  { id: 'creatif', label: '🎨 Créatif', desc: 'Activités fun rendent +30% bonheur' },
+  { id: 'travailleur', label: '💼 Travailleur', desc: 'Travail à l\'ordi paye +50%' },
+  { id: 'minimaliste', label: '🧘 Minimaliste', desc: 'Besoin descend lentement, debute avec moins' },
+];
 
 function defaultAppearance() {
   return {
     gender: 'f',
+    bodyHeight: 'normal',
+    bodyShape: 'normal',
     skin: '#fbc8a8',
     hair: '#5c3d1e',
     hairStyle: 'short',
+    eyeColor: '#3a4a6a',
+    eyebrow: 'normal',
+    facialHair: 'none',
+    glasses: 'none',
+    hat: 'none',
+    earring: 'none',
     top: 'tshirt',
     shirt: '#5b8aaf',
     bottom: 'pants',
     pants: '#3c4a5c',
+    shoes: 'sneakers',
+    shoeColor: '#1a1a1a',
+    traits: ['sociable'],
   };
 }
 
@@ -1237,16 +1312,34 @@ function buildPlayer() {
   nose.scale.set(0.9, 1.1, 1);
   playerGroup.add(nose);
 
-  const eyeGeom = new THREE.SphereGeometry(0.024, 8, 6);
-  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x1a1a1a });
-  playerEyeL = new THREE.Mesh(eyeGeom, eyeMat);
-  playerEyeL.position.set(-0.06, 1.36, -0.16);
-  playerEyeL.scale.set(1, 1, 0.4);
+  const eyeGeom = new THREE.SphereGeometry(0.028, 10, 8);
+  const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const eyeIrisMat = new THREE.MeshBasicMaterial({ color: app.eyeColor || 0x3a4a6a });
+  const eyeWhiteL = new THREE.Mesh(eyeGeom, eyeWhiteMat);
+  eyeWhiteL.position.set(-0.06, 1.36, -0.16); eyeWhiteL.scale.set(1, 1, 0.3);
+  playerGroup.add(eyeWhiteL);
+  const eyeWhiteR = new THREE.Mesh(eyeGeom, eyeWhiteMat);
+  eyeWhiteR.position.set(0.06, 1.36, -0.16); eyeWhiteR.scale.set(1, 1, 0.3);
+  playerGroup.add(eyeWhiteR);
+  playerEyeL = new THREE.Mesh(new THREE.SphereGeometry(0.018, 10, 8), eyeIrisMat);
+  playerEyeL.position.set(-0.06, 1.36, -0.175); playerEyeL.scale.set(1, 1, 0.3);
   playerGroup.add(playerEyeL);
-  playerEyeR = new THREE.Mesh(eyeGeom, eyeMat);
-  playerEyeR.position.set(0.06, 1.36, -0.16);
-  playerEyeR.scale.set(1, 1, 0.4);
+  playerEyeR = new THREE.Mesh(new THREE.SphereGeometry(0.018, 10, 8), eyeIrisMat);
+  playerEyeR.position.set(0.06, 1.36, -0.175); playerEyeR.scale.set(1, 1, 0.3);
   playerGroup.add(playerEyeR);
+
+  const browMat = new THREE.MeshLambertMaterial({ color: app.hair || 0x5c3d1e });
+  const browStyle = app.eyebrow || 'normal';
+  const browW = browStyle === 'thick' ? 0.07 : browStyle === 'thin' ? 0.04 : 0.05;
+  const browH = browStyle === 'thick' ? 0.018 : 0.012;
+  const browL = new THREE.Mesh(rb(browW, browH, 0.01, 0.003), browMat);
+  browL.position.set(-0.06, 1.42, -0.18);
+  if (browStyle === 'arched') browL.rotation.z = -0.25;
+  playerGroup.add(browL);
+  const browR = new THREE.Mesh(rb(browW, browH, 0.01, 0.003), browMat);
+  browR.position.set(0.06, 1.42, -0.18);
+  if (browStyle === 'arched') browR.rotation.z = 0.25;
+  playerGroup.add(browR);
 
   if (app.gender === 'f') {
     const blushMat = new THREE.MeshBasicMaterial({ color: 0xf48a8a, transparent: true, opacity: 0.55 });
@@ -1262,6 +1355,106 @@ function buildPlayer() {
   const mouth = new THREE.Mesh(rb(0.05, 0.012, 0.005, 0.002), mouthMat);
   mouth.position.set(0, 1.27, -0.17);
   playerGroup.add(mouth);
+
+  if (app.facialHair && app.facialHair !== 'none') {
+    const fhMat = new THREE.MeshLambertMaterial({ color: app.hair || 0x5c3d1e });
+    if (app.facialHair === 'mustache') {
+      const m = new THREE.Mesh(rb(0.1, 0.025, 0.02, 0.005), fhMat);
+      m.position.set(0, 1.3, -0.17); playerGroup.add(m);
+    } else if (app.facialHair === 'goatee') {
+      const m = new THREE.Mesh(rb(0.06, 0.05, 0.02, 0.01), fhMat);
+      m.position.set(0, 1.22, -0.17); playerGroup.add(m);
+    } else if (app.facialHair === 'beard') {
+      const m1 = new THREE.Mesh(rb(0.18, 0.1, 0.03, 0.02), fhMat);
+      m1.position.set(0, 1.23, -0.16); playerGroup.add(m1);
+      const m2 = new THREE.Mesh(rb(0.1, 0.025, 0.02, 0.005), fhMat);
+      m2.position.set(0, 1.3, -0.17); playerGroup.add(m2);
+    }
+  }
+
+  if (app.glasses && app.glasses !== 'none') {
+    const frameMat = new THREE.MeshLambertMaterial({ color: app.glasses === 'sun' ? 0x1a1a1a : 0x3a3a3a });
+    const lensMat = new THREE.MeshBasicMaterial({ color: app.glasses === 'sun' ? 0x1a1a1a : 0x6ab0d8, transparent: true, opacity: app.glasses === 'sun' ? 0.85 : 0.5 });
+    const isRound = app.glasses === 'round';
+    if (isRound) {
+      const lensL = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.008, 6, 16), frameMat);
+      lensL.position.set(-0.06, 1.36, -0.19); playerGroup.add(lensL);
+      const lensR = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.008, 6, 16), frameMat);
+      lensR.position.set(0.06, 1.36, -0.19); playerGroup.add(lensR);
+      const innerL = new THREE.Mesh(new THREE.CircleGeometry(0.04, 16), lensMat);
+      innerL.position.set(-0.06, 1.36, -0.188); playerGroup.add(innerL);
+      const innerR = new THREE.Mesh(new THREE.CircleGeometry(0.04, 16), lensMat);
+      innerR.position.set(0.06, 1.36, -0.188); playerGroup.add(innerR);
+    } else {
+      const lensL = new THREE.Mesh(rb(0.09, 0.06, 0.005, 0.01), frameMat);
+      lensL.position.set(-0.06, 1.36, -0.19); playerGroup.add(lensL);
+      const lensR = new THREE.Mesh(rb(0.09, 0.06, 0.005, 0.01), frameMat);
+      lensR.position.set(0.06, 1.36, -0.19); playerGroup.add(lensR);
+      const innerL = new THREE.Mesh(new THREE.PlaneGeometry(0.08, 0.05), lensMat);
+      innerL.position.set(-0.06, 1.36, -0.188); playerGroup.add(innerL);
+      const innerR = new THREE.Mesh(new THREE.PlaneGeometry(0.08, 0.05), lensMat);
+      innerR.position.set(0.06, 1.36, -0.188); playerGroup.add(innerR);
+    }
+    const bridge = new THREE.Mesh(rb(0.04, 0.008, 0.005, 0.002), frameMat);
+    bridge.position.set(0, 1.36, -0.19); playerGroup.add(bridge);
+  }
+
+  if (app.hat && app.hat !== 'none') {
+    const hatMat = new THREE.MeshLambertMaterial({ color: 0x2a2a2a });
+    if (app.hat === 'cap') {
+      const crown = new THREE.Mesh(new THREE.SphereGeometry(0.21, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.45), hatMat);
+      crown.position.y = 1.5; playerGroup.add(crown);
+      const visor = new THREE.Mesh(rb(0.34, 0.04, 0.18, 0.02), hatMat);
+      visor.position.set(0, 1.42, -0.18); playerGroup.add(visor);
+    } else if (app.hat === 'beanie') {
+      const beanie = new THREE.Mesh(new THREE.SphereGeometry(0.23, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), new THREE.MeshLambertMaterial({ color: 0x6b4a8a }));
+      beanie.position.y = 1.45; playerGroup.add(beanie);
+      const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.08, 16), new THREE.MeshLambertMaterial({ color: 0x5a3a78 }));
+      cuff.position.y = 1.36; playerGroup.add(cuff);
+    } else if (app.hat === 'beret') {
+      const beret = new THREE.Mesh(new THREE.SphereGeometry(0.26, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.35), new THREE.MeshLambertMaterial({ color: 0xa85b5b }));
+      beret.position.y = 1.45; beret.scale.y = 0.6; playerGroup.add(beret);
+      const stem = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), new THREE.MeshLambertMaterial({ color: 0xa85b5b }));
+      stem.position.set(0.08, 1.55, -0.05); playerGroup.add(stem);
+    } else if (app.hat === 'fedora') {
+      const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.2, 0.18, 16), new THREE.MeshLambertMaterial({ color: 0x4a3520 }));
+      crown.position.y = 1.55; playerGroup.add(crown);
+      const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.04, 20), new THREE.MeshLambertMaterial({ color: 0x4a3520 }));
+      brim.position.y = 1.46; playerGroup.add(brim);
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.181, 0.201, 0.04, 16), new THREE.MeshLambertMaterial({ color: 0x1a1a1a }));
+      band.position.y = 1.48; playerGroup.add(band);
+    }
+  }
+
+  if (app.earring && app.earring !== 'none') {
+    const earringMat = new THREE.MeshLambertMaterial({ color: 0xd4a857, metalness: 0.5 });
+    if (app.earring === 'stud') {
+      const stL = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 6), earringMat);
+      stL.position.set(-0.2, 1.27, 0); playerGroup.add(stL);
+      const stR = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 6), earringMat);
+      stR.position.set(0.2, 1.27, 0); playerGroup.add(stR);
+    } else {
+      const hpL = new THREE.Mesh(new THREE.TorusGeometry(0.025, 0.005, 6, 12), earringMat);
+      hpL.position.set(-0.2, 1.24, 0); hpL.rotation.y = Math.PI / 2; playerGroup.add(hpL);
+      const hpR = new THREE.Mesh(new THREE.TorusGeometry(0.025, 0.005, 6, 12), earringMat);
+      hpR.position.set(0.2, 1.24, 0); hpR.rotation.y = Math.PI / 2; playerGroup.add(hpR);
+    }
+  }
+
+  const shoeMat = new THREE.MeshLambertMaterial({ color: app.shoeColor || 0x1a1a1a });
+  const sStyle = app.shoes || 'sneakers';
+  const shoeY = sStyle === 'sandals' ? 0.05 : 0.06;
+  const shoeH = sStyle === 'sandals' ? 0.04 : sStyle === 'boots' ? 0.18 : 0.08;
+  const shoeL = new THREE.Mesh(rb(0.14, shoeH, 0.2, 0.03), shoeMat);
+  shoeL.position.set(-0.08, shoeY + shoeH / 2, 0.02); shoeL.castShadow = true;
+  playerGroup.add(shoeL);
+  const shoeR = new THREE.Mesh(rb(0.14, shoeH, 0.2, 0.03), shoeMat);
+  shoeR.position.set(0.08, shoeY + shoeH / 2, 0.02); shoeR.castShadow = true;
+  playerGroup.add(shoeR);
+
+  const heightScale = app.bodyHeight === 'tall' ? 1.1 : app.bodyHeight === 'short' ? 0.88 : 1.0;
+  const widthScale = app.bodyShape === 'athletic' ? 1.15 : app.bodyShape === 'curvy' ? 1.2 : app.bodyShape === 'slim' ? 0.88 : 1.0;
+  playerGroup.scale.set(widthScale, heightScale, widthScale);
 
   playerGroup.position.set(state.player.x + 0.5, 0, state.player.y + 0.5);
   playerGroup.rotation.y = Math.PI;
@@ -1411,9 +1604,19 @@ function loop(ts) {
   requestAnimationFrame(loop);
 }
 
+function hasTrait(id) {
+  return Array.isArray(state.appearance?.traits) && state.appearance.traits.includes(id);
+}
+
 function tick(dt) {
+  const isNight = state.timeMin / 60 >= 21 || state.timeMin / 60 < 7;
   for (const k of NEED_KEYS) {
-    state.needs[k] = Math.max(0, state.needs[k] - DECAY[k] * dt);
+    let rate = DECAY[k];
+    if (hasTrait('minimaliste')) rate *= 0.7;
+    if (hasTrait('sportif') && k === 'energy') rate *= 0.7;
+    if (hasTrait('casanier') && (k === 'social' || k === 'fun')) rate *= 0.5;
+    if (hasTrait('noctambule') && k === 'energy') rate *= isNight ? 0.4 : 1.4;
+    state.needs[k] = Math.max(0, state.needs[k] - rate * dt);
   }
   if (state.needs.hunger < 5) state.needs.fun = Math.max(0, state.needs.fun - 0.05 * dt * 60);
 
@@ -1580,9 +1783,20 @@ function finishAction() {
   const a = state.action;
   if (!a) return;
   for (const [k, v] of Object.entries(a.def.effect)) {
-    if (k in state.needs) state.needs[k] = Math.max(0, Math.min(100, state.needs[k] + v));
+    if (k in state.needs) {
+      let mod = v;
+      if (k === 'hunger' && v > 0 && hasTrait('gourmand')) mod = Math.round(v * 1.5);
+      if (k === 'social' && v > 0 && hasTrait('sociable')) mod = Math.round(v * 1.5);
+      if (k === 'fun' && v > 0 && hasTrait('creatif')) mod = Math.round(v * 1.3);
+      if (k === 'energy' && v > 0 && hasTrait('sportif')) mod = Math.round(v * 1.3);
+      state.needs[k] = Math.max(0, Math.min(100, state.needs[k] + mod));
+    }
   }
-  if (a.def.money) state.money = Math.max(0, state.money + a.def.money);
+  if (a.def.money) {
+    let amount = a.def.money;
+    if (amount > 0 && hasTrait('travailleur') && a.key === 'work') amount = Math.round(amount * 1.5);
+    state.money = Math.max(0, state.money + amount);
+  }
   toast(a.def.label + ' ✓');
   spawnEmote(emoteFor(a.key));
   state.action = null;
@@ -1739,6 +1953,7 @@ function openMenu() {
   const m = document.getElementById('modal');
   document.getElementById('modal-title').textContent = 'Statut';
   const body = document.getElementById('modal-body');
+  const traits = (state.appearance?.traits || []).map(id => TRAITS.find(t => t.id === id)?.label).filter(Boolean).join(' ') || 'Aucun';
   body.innerHTML = `
     <div class="row"><span>Joueur</span><strong>${state.name}</strong></div>
     <div class="row"><span>Jour</span><strong>${state.day}</strong></div>
@@ -1749,6 +1964,7 @@ function openMenu() {
     <div class="row"><span>Hygiène</span><strong>${Math.floor(state.needs.hygiene)}%</strong></div>
     <div class="row"><span>Social</span><strong>${Math.floor(state.needs.social)}%</strong></div>
     <div class="row"><span>Fun</span><strong>${Math.floor(state.needs.fun)}%</strong></div>
+    <div class="row"><span>Traits</span><strong style="font-size:12px">${traits}</strong></div>
   `;
   m.hidden = false;
 }
@@ -1758,10 +1974,20 @@ function drawCharacter2D(c, app, dir, moving, anim) {
   const hair = app.hair || '#5c3d1e';
   const shirt = app.shirt || '#5b8aaf';
   const pants = app.pants || '#3c4a5c';
+  const eyeColor = app.eyeColor || '#1a1a1a';
   const style = app.hairStyle || 'short';
   const gender = app.gender || 'f';
   const top = app.top || 'tshirt';
   const bottom = app.bottom || 'pants';
+  const browStyle = app.eyebrow || 'normal';
+  const fh = app.facialHair || 'none';
+  const glasses = app.glasses || 'none';
+  const hat = app.hat || 'none';
+  const earring = app.earring || 'none';
+  const heightScale = app.bodyHeight === 'tall' ? 1.1 : app.bodyHeight === 'short' ? 0.88 : 1.0;
+  const widthScale = app.bodyShape === 'athletic' ? 1.15 : app.bodyShape === 'curvy' ? 1.2 : app.bodyShape === 'slim' ? 0.88 : 1.0;
+  c.save();
+  c.scale(widthScale, heightScale);
   c.fillStyle = 'rgba(0,0,0,0.18)';
   c.beginPath(); c.ellipse(0, 0, 9, 3, 0, 0, Math.PI * 2); c.fill();
   const by = -14;
@@ -1810,9 +2036,66 @@ function drawCharacter2D(c, app, dir, moving, anim) {
       c.fillRect(-2, by - 12, 4, 3); c.fillRect(-1, by - 14, 2, 2);
     }
   }
-  c.fillStyle = '#1a1a1a';
+  c.fillStyle = '#ffffff';
+  c.fillRect(-3, by - 4, 2, 2); c.fillRect(2, by - 4, 2, 2);
+  c.fillStyle = eyeColor;
   c.fillRect(-3, by - 4, 1, 1); c.fillRect(2, by - 4, 1, 1);
+  if (browStyle !== 'none') {
+    c.fillStyle = hair;
+    const browW = browStyle === 'thick' ? 4 : browStyle === 'thin' ? 2 : 3;
+    c.fillRect(-3, by - 6, browW, 1);
+    c.fillRect(2, by - 6, browW, 1);
+  }
+  if (fh === 'mustache' || fh === 'beard') {
+    c.fillStyle = hair;
+    c.fillRect(-2, by - 1, 4, 1);
+  }
+  if (fh === 'goatee' || fh === 'beard') {
+    c.fillStyle = hair;
+    c.fillRect(-1, by + 1, 2, 1);
+  }
+  if (fh === 'beard') {
+    c.fillStyle = hair;
+    c.fillRect(-3, by, 6, 1);
+  }
   c.fillStyle = '#d88a8a'; c.fillRect(-1, by - 1, 2, 1);
+  if (glasses !== 'none') {
+    c.fillStyle = glasses === 'sun' ? '#1a1a1a' : '#3a3a3a';
+    c.fillRect(-4, by - 5, 3, 3);
+    c.fillRect(1, by - 5, 3, 3);
+    c.fillRect(-2, by - 4, 3, 1);
+    if (glasses !== 'sun') {
+      c.fillStyle = 'rgba(106,176,216,0.5)';
+      c.fillRect(-3, by - 4, 1, 1);
+      c.fillRect(2, by - 4, 1, 1);
+    }
+  }
+  if (earring !== 'none') {
+    c.fillStyle = '#d4a857';
+    c.fillRect(-6, by - 1, 1, 1);
+    c.fillRect(5, by - 1, 1, 1);
+  }
+  if (hat === 'cap') {
+    c.fillStyle = '#2a2a2a';
+    c.fillRect(-6, by - 11, 12, 4);
+    c.fillRect(-7, by - 7, 8, 1);
+  } else if (hat === 'beanie') {
+    c.fillStyle = '#6b4a8a';
+    c.fillRect(-6, by - 12, 12, 5);
+    c.fillStyle = '#5a3a78';
+    c.fillRect(-6, by - 7, 12, 1);
+  } else if (hat === 'beret') {
+    c.fillStyle = '#a85b5b';
+    c.fillRect(-7, by - 11, 14, 4);
+    c.fillRect(4, by - 13, 2, 2);
+  } else if (hat === 'fedora') {
+    c.fillStyle = '#4a3520';
+    c.fillRect(-5, by - 13, 10, 5);
+    c.fillRect(-8, by - 8, 16, 2);
+    c.fillStyle = '#1a1a1a';
+    c.fillRect(-5, by - 9, 10, 1);
+  }
+  c.restore();
 }
 
 const bootEl = document.getElementById('boot');
@@ -1828,7 +2111,42 @@ if (saved && saved.name) {
 }
 
 buildPickers();
+buildTraitsPicker();
 drawPreview();
+
+function buildTraitsPicker() {
+  const container = document.getElementById('traits-picker');
+  if (!container) return;
+  container.innerHTML = '';
+  for (const tr of TRAITS) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'trait-btn';
+    btn.dataset.id = tr.id;
+    btn.innerHTML = `<span class="trait-label">${tr.label}</span><span class="trait-desc">${tr.desc}</span>`;
+    btn.addEventListener('click', () => toggleTrait(tr.id));
+    container.appendChild(btn);
+  }
+  refreshTraits();
+}
+
+function toggleTrait(id) {
+  pendingAppearance.traits = pendingAppearance.traits || [];
+  const idx = pendingAppearance.traits.indexOf(id);
+  if (idx >= 0) pendingAppearance.traits.splice(idx, 1);
+  else if (pendingAppearance.traits.length < 2) pendingAppearance.traits.push(id);
+  else { return; }
+  refreshTraits();
+}
+
+function refreshTraits() {
+  document.querySelectorAll('.trait-btn').forEach(b => {
+    const sel = (pendingAppearance.traits || []).includes(b.dataset.id);
+    b.classList.toggle('selected', sel);
+    const full = (pendingAppearance.traits || []).length >= 2;
+    b.classList.toggle('disabled', !sel && full);
+  });
+}
 
 function buildPickers() {
   for (const [key, options] of Object.entries(APPEARANCE_PALETTES)) {

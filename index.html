@@ -33,16 +33,45 @@
       <label>Prénom</label>
       <input id="name-input" type="text" maxlength="14" placeholder="Ton prénom" autocomplete="off" value="">
 
+      <h3 class="picker-section">👤 Identité</h3>
       <div class="picker-row">
         <span class="picker-label">Genre</span>
         <div class="swatches text" data-picker="gender"></div>
       </div>
       <div class="picker-row">
+        <span class="picker-label">Stature</span>
+        <div class="swatches text" data-picker="bodyHeight"></div>
+      </div>
+      <div class="picker-row">
+        <span class="picker-label">Carrure</span>
+        <div class="swatches text" data-picker="bodyShape"></div>
+      </div>
+
+      <h3 class="picker-section">🎨 Visage</h3>
+      <div class="picker-row">
         <span class="picker-label">Peau</span>
         <div class="swatches" data-picker="skin"></div>
       </div>
       <div class="picker-row">
-        <span class="picker-label">Cheveux</span>
+        <span class="picker-label">Yeux</span>
+        <div class="swatches" data-picker="eyeColor"></div>
+      </div>
+      <div class="picker-row">
+        <span class="picker-label">Sourcils</span>
+        <div class="swatches text" data-picker="eyebrow"></div>
+      </div>
+      <div class="picker-row">
+        <span class="picker-label">Pilosité</span>
+        <div class="swatches text" data-picker="facialHair"></div>
+      </div>
+      <div class="picker-row">
+        <span class="picker-label">Lunettes</span>
+        <div class="swatches text" data-picker="glasses"></div>
+      </div>
+
+      <h3 class="picker-section">💇 Cheveux</h3>
+      <div class="picker-row">
+        <span class="picker-label">Couleur</span>
         <div class="swatches" data-picker="hair"></div>
       </div>
       <div class="picker-row">
@@ -50,21 +79,42 @@
         <div class="swatches text" data-picker="hairStyle"></div>
       </div>
       <div class="picker-row">
-        <span class="picker-label">Vêtement</span>
+        <span class="picker-label">Chapeau</span>
+        <div class="swatches text" data-picker="hat"></div>
+      </div>
+      <div class="picker-row">
+        <span class="picker-label">Boucles</span>
+        <div class="swatches text" data-picker="earring"></div>
+      </div>
+
+      <h3 class="picker-section">👕 Tenue</h3>
+      <div class="picker-row">
+        <span class="picker-label">Haut</span>
         <div class="swatches text" data-picker="top"></div>
       </div>
       <div class="picker-row">
-        <span class="picker-label">Couleur haut</span>
+        <span class="picker-label">Coul. haut</span>
         <div class="swatches" data-picker="shirt"></div>
       </div>
       <div class="picker-row">
-        <span class="picker-label">Style bas</span>
+        <span class="picker-label">Bas</span>
         <div class="swatches text" data-picker="bottom"></div>
       </div>
       <div class="picker-row">
-        <span class="picker-label">Couleur bas</span>
+        <span class="picker-label">Coul. bas</span>
         <div class="swatches" data-picker="pants"></div>
       </div>
+      <div class="picker-row">
+        <span class="picker-label">Chaussures</span>
+        <div class="swatches text" data-picker="shoes"></div>
+      </div>
+      <div class="picker-row">
+        <span class="picker-label">Coul. chauss.</span>
+        <div class="swatches" data-picker="shoeColor"></div>
+      </div>
+
+      <h3 class="picker-section">⭐ Personnalité <small>(2 max)</small></h3>
+      <div id="traits-picker" class="traits-list"></div>
 
       <div class="boot-actions">
         <button id="start-btn">Commencer</button>

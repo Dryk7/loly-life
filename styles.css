@@ -130,6 +130,53 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   border-color: transparent;
   box-shadow: 0 2px 6px rgba(0,0,0,0.4);
 }
+
+.picker-section {
+  font-size: 13px;
+  text-align: left;
+  color: var(--accent);
+  font-weight: 700;
+  margin: 18px 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.picker-section small { color: var(--ink-soft); font-weight: 400; font-size: 11px; }
+
+.traits-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.trait-btn {
+  background: var(--bg-soft);
+  border: 2px solid transparent;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.trait-btn:active { transform: scale(0.98); }
+.trait-btn.selected {
+  border-color: var(--accent);
+  background: rgba(244,184,96,0.15);
+}
+.trait-btn .trait-label {
+  font-size: 13px;
+  color: var(--ink);
+  font-weight: 700;
+}
+.trait-btn .trait-desc {
+  font-size: 11px;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+.trait-btn.disabled { opacity: 0.4; cursor: not-allowed; }
 .boot-card h1 {
   font-size: 32px;
   letter-spacing: 1px;
