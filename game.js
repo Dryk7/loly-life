@@ -2122,12 +2122,18 @@ function updateDayNight() {
   }
 
   const lampOn = 1 - dayFactor;
-  for (const lp of lampLights) {
-    lp.light.intensity = lampOn * 1.6;
+  const tnow = performance.now() / 1000;
+  for (let i = 0; i < lampLights.length; i++) {
+    const lp = lampLights[i];
+    const seed = i * 13.7;
+    const flick = 1 + Math.sin(tnow * 5.7 + seed) * 0.08
+                    + Math.sin(tnow * 11.3 + seed * 1.7) * 0.04
+                    + Math.sin(tnow * 23.1 + seed * 2.3) * 0.025;
+    lp.light.intensity = lampOn * 1.6 * flick;
     if (lp.bulb && lp.bulb.material) {
       const c = new THREE.Color(lp.baseColor);
       const dim = new THREE.Color(0x3a3530);
-      lp.bulb.material.color.copy(dim).lerp(c, lampOn);
+      lp.bulb.material.color.copy(dim).lerp(c, lampOn).multiplyScalar(0.85 + flick * 0.15);
     }
   }
 
