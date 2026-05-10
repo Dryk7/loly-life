@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4a3766"/>
+      <stop offset="1" stop-color="#2a1f3d"/>
+    </linearGradient>
+    <linearGradient id="roof" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e87a5d"/>
+      <stop offset="1" stop-color="#a8473a"/>
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="40" fill="url(#bg)"/>
+  <circle cx="146" cy="50" r="20" fill="#f4b860" opacity="0.85"/>
+  <polygon points="40,90 96,50 152,90" fill="url(#roof)"/>
+  <rect x="50" y="88" width="92" height="68" fill="#e8d5b7"/>
+  <rect x="50" y="88" width="92" height="6" fill="#5b4a30"/>
+  <rect x="86" y="116" width="20" height="40" fill="#5b4a30"/>
+  <circle cx="102" cy="138" r="2" fill="#f4b860"/>
+  <rect x="62" y="106" width="16" height="16" fill="#7ec6e0"/>
+  <rect x="62" y="106" width="16" height="2" fill="#fff" opacity="0.4"/>
+  <rect x="62" y="113" width="16" height="1" fill="#3a2818"/>
+  <rect x="69" y="106" width="2" height="16" fill="#3a2818"/>
+  <rect x="114" y="106" width="16" height="16" fill="#7ec6e0"/>
+  <rect x="114" y="106" width="16" height="2" fill="#fff" opacity="0.4"/>
+  <rect x="114" y="113" width="16" height="1" fill="#3a2818"/>
+  <rect x="121" y="106" width="2" height="16" fill="#3a2818"/>
+  <circle cx="96" cy="78" r="3" fill="#fff" opacity="0.6"/>
+</svg>

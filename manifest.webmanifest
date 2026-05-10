@@ -1,0 +1,14 @@
+{
+  "name": "Loly Life",
+  "short_name": "Loly Life",
+  "description": "Une petite vie à mener.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a1428",
+  "theme_color": "#2a1f3d",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
