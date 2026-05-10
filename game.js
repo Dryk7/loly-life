@@ -299,32 +299,32 @@ const DECAY = {
 const NEED_KEYS = ['hunger', 'energy', 'hygiene', 'social', 'fun'];
 
 const BUILD_CATALOG = [
-  { id: 'bed', name: 'Lit', icon: '🛏', price: 220, type: 'bed', w: 2, h: 1, action: 'sleep', cat: 'essential' },
-  { id: 'shower', name: 'Douche', icon: '🚿', price: 180, type: 'shower', w: 1, h: 1, action: 'shower', cat: 'essential' },
-  { id: 'toilet', name: 'WC', icon: '🚽', price: 80, type: 'toilet', w: 1, h: 1, action: 'toilet', cat: 'essential' },
-  { id: 'fridge', name: 'Frigo', icon: '🧊', price: 260, type: 'fridge', w: 1, h: 1, action: 'snack', cat: 'essential' },
-  { id: 'stove', name: 'Cuisinière', icon: '🍳', price: 320, type: 'stove', w: 1, h: 1, action: 'cook', cat: 'essential' },
-  { id: 'computer', name: 'Ordinateur', icon: '💻', price: 400, type: 'computer', w: 1, h: 1, action: 'work', cat: 'essential' },
-  { id: 'tv', name: 'Télé', icon: '📺', price: 250, type: 'tv', w: 1, h: 1, action: 'tv', cat: 'essential' },
-  { id: 'sofa', name: 'Canapé', icon: '🛋', price: 200, type: 'sofa', w: 2, h: 1, action: 'relax', cat: 'essential' },
-  { id: 'wardrobe', name: 'Armoire', icon: '🪞', price: 140, type: 'wardrobe', w: 1, h: 1, action: null, cat: 'essential' },
-  { id: 'counter', name: 'Comptoir', icon: '🍽', price: 100, type: 'counter', w: 1, h: 1, action: null, cat: 'essential' },
-  { id: 'plant', name: 'Plante XL', icon: '🌿', price: 60, type: 'plant', w: 1, h: 1, action: 'plant', cat: 'essential' },
-  { id: 'lamp', name: 'Lampe', icon: '💡', price: 40, type: 'placedLamp', w: 1, h: 1, cat: 'deco' },
-  { id: 'plant_s', name: 'Plante S', icon: '🪴', price: 15, type: 'placedPlant', w: 1, h: 1, cat: 'deco' },
-  { id: 'painting', name: 'Tableau', icon: '🖼', price: 20, type: 'placedPainting', w: 1, h: 1, cat: 'deco' },
-  { id: 'bookshelf', name: 'Étagère', icon: '📚', price: 60, type: 'placedBookshelf', w: 1, h: 1, action: 'read', cat: 'deco' },
-  { id: 'stool', name: 'Tabouret', icon: '🪑', price: 10, type: 'placedStool', w: 1, h: 1, cat: 'deco' },
-  { id: 'rug', name: 'Tapis', icon: '🟫', price: 25, type: 'placedRug', w: 2, h: 1, action: 'yoga', cat: 'deco' },
-  { id: 'cat_toy', name: 'Panier', icon: '🐈', price: 35, type: 'placedCatBed', w: 1, h: 1, cat: 'deco' },
-  { id: 'guitar', name: 'Guitare', icon: '🎸', price: 80, type: 'placedGuitar', w: 1, h: 1, action: 'play_guitar', cat: 'deco' },
-  { id: 'vase', name: 'Vase', icon: '🌻', price: 18, type: 'placedVase', w: 1, h: 1, cat: 'deco' },
-  { id: 'pouf', name: 'Pouf', icon: '🪨', price: 30, type: 'placedPouf', w: 1, h: 1, cat: 'deco' },
-  { id: 'candle', name: 'Bougie', icon: '🕯', price: 12, type: 'placedCandle', w: 1, h: 1, cat: 'deco' },
-  { id: 'clock', name: 'Horloge', icon: '⏰', price: 22, type: 'placedClock', w: 1, h: 1, cat: 'deco' },
-  { id: 'aquarium', name: 'Aquarium', icon: '🐠', price: 90, type: 'placedAquarium', w: 1, h: 1, cat: 'deco' },
-  { id: 'easel', name: 'Chevalet', icon: '🎨', price: 45, type: 'placedEasel', w: 1, h: 1, action: 'paint', cat: 'deco' },
-  { id: 'pouf2', name: 'Tapis sport', icon: '🧘', price: 20, type: 'placedYogaMat', w: 2, h: 1, action: 'workout', cat: 'deco' },
+  { id: 'bed', name: 'Lit', icon: '🛏', iconClass: 'bed', price: 220, type: 'bed', w: 2, h: 1, action: 'sleep', cat: 'essential' },
+  { id: 'shower', name: 'Douche', icon: '🚿', iconClass: 'shower', price: 180, type: 'shower', w: 1, h: 1, action: 'shower', cat: 'essential' },
+  { id: 'toilet', name: 'WC', icon: '🚽', iconClass: 'toilet', price: 80, type: 'toilet', w: 1, h: 1, action: 'toilet', cat: 'essential' },
+  { id: 'fridge', name: 'Frigo', icon: '🧊', iconClass: 'fridge', price: 260, type: 'fridge', w: 1, h: 1, action: 'snack', cat: 'essential' },
+  { id: 'stove', name: 'Cuisinière', icon: '🍳', iconClass: 'stove', price: 320, type: 'stove', w: 1, h: 1, action: 'cook', cat: 'essential' },
+  { id: 'computer', name: 'Ordinateur', icon: '💻', iconClass: 'computer', price: 400, type: 'computer', w: 1, h: 1, action: 'work', cat: 'essential' },
+  { id: 'tv', name: 'Télé', icon: '📺', iconClass: 'tv', price: 250, type: 'tv', w: 1, h: 1, action: 'tv', cat: 'essential' },
+  { id: 'sofa', name: 'Canapé', icon: '🛋', iconClass: 'sofa', price: 200, type: 'sofa', w: 2, h: 1, action: 'relax', cat: 'essential' },
+  { id: 'wardrobe', name: 'Armoire', icon: '🪞', iconClass: 'wardrobe', price: 140, type: 'wardrobe', w: 1, h: 1, action: null, cat: 'essential' },
+  { id: 'counter', name: 'Comptoir', icon: '🍽', iconClass: 'counter', price: 100, type: 'counter', w: 1, h: 1, action: null, cat: 'essential' },
+  { id: 'plant', name: 'Plante XL', icon: '🌿', iconClass: 'plant', price: 60, type: 'plant', w: 1, h: 1, action: 'plant', cat: 'essential' },
+  { id: 'lamp', name: 'Lampe', icon: '💡', iconClass: 'lamp', price: 40, type: 'placedLamp', w: 1, h: 1, cat: 'deco' },
+  { id: 'plant_s', name: 'Plante S', icon: '🪴', iconClass: 'plant', price: 15, type: 'placedPlant', w: 1, h: 1, cat: 'deco' },
+  { id: 'painting', name: 'Tableau', icon: '🖼', iconClass: 'painting', price: 20, type: 'placedPainting', w: 1, h: 1, cat: 'deco' },
+  { id: 'bookshelf', name: 'Étagère', icon: '📚', iconClass: 'bookshelf', price: 60, type: 'placedBookshelf', w: 1, h: 1, action: 'read', cat: 'deco' },
+  { id: 'stool', name: 'Tabouret', icon: '🪑', iconClass: 'stool', price: 10, type: 'placedStool', w: 1, h: 1, cat: 'deco' },
+  { id: 'rug', name: 'Tapis', icon: '🟫', iconClass: 'rug', price: 25, type: 'placedRug', w: 2, h: 1, action: 'yoga', cat: 'deco' },
+  { id: 'cat_toy', name: 'Panier', icon: '🐈', iconClass: 'catbed', price: 35, type: 'placedCatBed', w: 1, h: 1, cat: 'deco' },
+  { id: 'guitar', name: 'Guitare', icon: '🎸', iconClass: 'guitar', price: 80, type: 'placedGuitar', w: 1, h: 1, action: 'play_guitar', cat: 'deco' },
+  { id: 'vase', name: 'Vase', icon: '🌻', iconClass: 'vase', price: 18, type: 'placedVase', w: 1, h: 1, cat: 'deco' },
+  { id: 'pouf', name: 'Pouf', icon: '🪨', iconClass: 'pouf', price: 30, type: 'placedPouf', w: 1, h: 1, cat: 'deco' },
+  { id: 'candle', name: 'Bougie', icon: '🕯', iconClass: 'candle', price: 12, type: 'placedCandle', w: 1, h: 1, cat: 'deco' },
+  { id: 'clock', name: 'Horloge', icon: '⏰', iconClass: 'clock', price: 22, type: 'placedClock', w: 1, h: 1, cat: 'deco' },
+  { id: 'aquarium', name: 'Aquarium', icon: '🐠', iconClass: 'aquarium', price: 90, type: 'placedAquarium', w: 1, h: 1, cat: 'deco' },
+  { id: 'easel', name: 'Chevalet', icon: '🎨', iconClass: 'easel', price: 45, type: 'placedEasel', w: 1, h: 1, action: 'paint', cat: 'deco' },
+  { id: 'pouf2', name: 'Tapis sport', icon: '🧘', iconClass: 'yogamat', price: 20, type: 'placedYogaMat', w: 2, h: 1, action: 'workout', cat: 'deco' },
 ];
 
 const NON_BLOCKING_TYPES = new Set(['placedPainting', 'placedRug']);
@@ -2087,11 +2087,11 @@ function checkAchievements() {
 
 function openPhone() {
   const m = document.getElementById('modal');
-  document.getElementById('modal-title').textContent = '📱 Téléphone';
+  document.getElementById('modal-title').textContent = 'Téléphone';
   const body = document.getElementById('modal-body');
   body.innerHTML = `
     <div class="phone-app">
-      <h3>💰 Banque</h3>
+      <h3><span class="app-icon svg-bank"></span>Banque</h3>
       <div class="app-row"><span>Compte courant</span><strong style="color:var(--accent)">$${Math.floor(state.money)}</strong></div>
       <div class="app-row"><span>Épargne (+2%/jour)</span><strong style="color:var(--good)">$${Math.floor(state.bank)}</strong></div>
       <div class="app-row" style="gap:8px;justify-content:flex-end">
@@ -2100,18 +2100,18 @@ function openPhone() {
       </div>
     </div>
     <div class="phone-app">
-      <h3>🍕 Livraison</h3>
-      <div class="app-row"><span>🍔 Burger ($15)</span><button data-deliver="burger" data-price="15">Cmd</button></div>
-      <div class="app-row"><span>🍕 Pizza ($25)</span><button data-deliver="pizza" data-price="25">Cmd</button></div>
-      <div class="app-row"><span>🍣 Sushi ($40)</span><button data-deliver="sushi" data-price="40">Cmd</button></div>
+      <h3><span class="app-icon svg-delivery"></span>Livraison</h3>
+      <div class="app-row"><span>Burger ($15)</span><button data-deliver="burger" data-price="15">Cmd</button></div>
+      <div class="app-row"><span>Pizza ($25)</span><button data-deliver="pizza" data-price="25">Cmd</button></div>
+      <div class="app-row"><span>Sushi ($40)</span><button data-deliver="sushi" data-price="40">Cmd</button></div>
     </div>
     <div class="phone-app">
-      <h3>💬 Amis</h3>
+      <h3><span class="app-icon svg-friends"></span>Amis</h3>
       ${(state.friends.length ? state.friends : (state.friends = pickFriends()))
-        .map(f => `<div class="app-row"><span>${f.emoji} ${f.name}</span><button data-chat="${f.name}">Discuter</button></div>`).join('')}
+        .map(f => `<div class="app-row"><span>${f.name}</span><button data-chat="${f.name}">Discuter</button></div>`).join('')}
     </div>
     <div class="phone-app">
-      <h3>🏆 Trophées (${state.achievements.length}/${ACHIEVEMENTS.length})</h3>
+      <h3><span class="app-icon svg-trophy"></span>Trophées (${state.achievements.length}/${ACHIEVEMENTS.length})</h3>
       <div class="achievements-grid">
         ${ACHIEVEMENTS.map(ach => `<div class="achievement ${state.achievements.includes(ach.id) ? 'unlocked' : ''}" title="${ach.label}">${ach.icon}</div>`).join('')}
       </div>
@@ -2165,7 +2165,7 @@ function pickFriends() {
 
 function openQuests() {
   const m = document.getElementById('modal');
-  document.getElementById('modal-title').textContent = '📋 Quêtes du jour';
+  document.getElementById('modal-title').textContent = 'Quêtes du jour';
   const body = document.getElementById('modal-body');
   if (!state.quests.length) generateQuests();
   body.innerHTML = state.quests.map(q => `
@@ -4176,15 +4176,15 @@ document.querySelectorAll('.action-btn').forEach(btn => {
 let _catalogTab = 'essential';
 function openBuildCatalog() {
   const m = document.getElementById('modal');
-  document.getElementById('modal-title').textContent = '🔨 Catalogue';
+  document.getElementById('modal-title').textContent = 'Catalogue';
   const body = document.getElementById('modal-body');
   body.innerHTML = `
     <div style="font-size:12px;color:var(--ink-soft);margin-bottom:10px">Argent: <strong style="color:var(--accent)">$${Math.floor(state.money)}</strong></div>
     <div class="catalog-tabs">
-      <button class="catalog-tab ${_catalogTab === 'essential' ? 'active' : ''}" data-tab="essential">📦 Essentiels</button>
-      <button class="catalog-tab ${_catalogTab === 'deco' ? 'active' : ''}" data-tab="deco">🎨 Décoration</button>
+      <button class="catalog-tab ${_catalogTab === 'essential' ? 'active' : ''}" data-tab="essential">Essentiels</button>
+      <button class="catalog-tab ${_catalogTab === 'deco' ? 'active' : ''}" data-tab="deco">Décoration</button>
     </div>
-    <button id="demolish-btn" style="width:100%;padding:10px;border-radius:10px;background:var(--bad);color:#fff;font-weight:600;font-size:13px;margin-bottom:14px">🔥 Démolir (refund 50%)</button>
+    <button id="demolish-btn" style="width:100%;padding:10px;border-radius:10px;background:var(--bad);color:#fff;font-weight:600;font-size:13px;margin-bottom:14px">Démolir (refund 50%)</button>
     <div class="catalog cat-essential" ${_catalogTab !== 'essential' ? 'hidden' : ''}></div>
     <div class="catalog cat-deco" ${_catalogTab !== 'deco' ? 'hidden' : ''}></div>
   `;
@@ -4201,7 +4201,10 @@ function openBuildCatalog() {
     btn.type = 'button';
     btn.className = 'catalog-item';
     if (state.money < it.price) btn.classList.add('unaffordable');
-    btn.innerHTML = `<span class="ci-icon">${it.icon}</span><span class="ci-name">${it.name}</span><span class="ci-price">$${it.price}</span>`;
+    const iconHtml = it.iconClass
+      ? `<span class="ci-svg svg-${it.iconClass}"></span>`
+      : `<span class="ci-icon">${it.icon}</span>`;
+    btn.innerHTML = `${iconHtml}<span class="ci-name">${it.name}</span><span class="ci-price">$${it.price}</span>`;
     btn.addEventListener('click', () => {
       if (state.money < it.price) { toast("Pas assez d'argent."); return; }
       state.buildMode = it;
@@ -4209,7 +4212,7 @@ function openBuildCatalog() {
       m.hidden = true;
       const bar = document.getElementById('build-bar');
       bar.hidden = false;
-      document.getElementById('build-name').textContent = `${it.icon} ${it.name} · $${it.price}`;
+      document.getElementById('build-name').textContent = `${it.name} · $${it.price}`;
     });
     (it.cat === 'essential' ? essentialList : decoList).appendChild(btn);
   }
@@ -4219,7 +4222,7 @@ function openBuildCatalog() {
     m.hidden = true;
     const bar = document.getElementById('build-bar');
     bar.hidden = false;
-    document.getElementById('build-name').textContent = '🔥 Tap un objet à démolir';
+    document.getElementById('build-name').textContent = 'Tap un objet à démolir';
   });
   m.hidden = false;
 }
