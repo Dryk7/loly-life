@@ -81,6 +81,17 @@ const DECAY = {
 
 const NEED_KEYS = ['hunger', 'energy', 'hygiene', 'social', 'fun'];
 
+const BUILD_CATALOG = [
+  { id: 'lamp', name: 'Lampe', icon: '💡', price: 40, type: 'placedLamp', w: 1, h: 1 },
+  { id: 'plant_s', name: 'Plante', icon: '🪴', price: 15, type: 'placedPlant', w: 1, h: 1 },
+  { id: 'painting', name: 'Tableau', icon: '🖼', price: 20, type: 'placedPainting', w: 1, h: 1 },
+  { id: 'bookshelf', name: 'Étagère', icon: '📚', price: 60, type: 'placedBookshelf', w: 1, h: 1 },
+  { id: 'stool', name: 'Tabouret', icon: '🪑', price: 10, type: 'placedStool', w: 1, h: 1 },
+  { id: 'rug', name: 'Tapis', icon: '🟫', price: 25, type: 'placedRug', w: 2, h: 1 },
+  { id: 'cat_toy', name: 'Panier', icon: '🐈', price: 35, type: 'placedCatBed', w: 1, h: 1 },
+  { id: 'guitar', name: 'Guitare', icon: '🎸', price: 80, type: 'placedGuitar', w: 1, h: 1 },
+];
+
 const APPEARANCE_PALETTES = {
   gender: [
     { id: 'f', label: 'Femme' },
@@ -206,12 +217,14 @@ function defaultState(name) {
     name: name || 'Toi',
     appearance: defaultAppearance(),
     needs: { hunger: 80, energy: 90, hygiene: 80, social: 70, fun: 70 },
-    money: 50,
+    money: 200,
     timeMin: 8 * 60,
     day: 1,
     player: { x: 5, y: 7, sub: 0, dir: 'down', anim: 0 },
     path: [],
     action: null,
+    placed: [],
+    buildMode: null,
   };
 }
 
@@ -236,6 +249,7 @@ function saveGame() {
     timeMin: state.timeMin,
     day: state.day,
     player: { x: state.player.x, y: state.player.y, dir: state.player.dir },
+    placed: state.placed,
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(snap)); } catch {}
 }
@@ -244,9 +258,10 @@ function applyLoaded(s) {
   state = defaultState(s.name);
   state.appearance = { ...defaultAppearance(), ...(s.appearance || {}) };
   state.needs = { ...state.needs, ...s.needs };
-  state.money = s.money ?? 50;
+  state.money = s.money ?? 200;
   state.timeMin = s.timeMin ?? 8 * 60;
   state.day = s.day ?? 1;
+  state.placed = Array.isArray(s.placed) ? s.placed : [];
   if (s.player) {
     state.player.x = s.player.x;
     state.player.y = s.player.y;
@@ -640,6 +655,126 @@ function buildItems() {
     group.traverse(o => { if (o.isMesh) o.userData.parentGroup = group; });
     scene.add(group);
     itemMeshes.push(group);
+  }
+  rebuildPlacedItems();
+}
+
+function rebuildPlacedItems() {
+  for (const m of itemMeshes.filter(o => o.userData?.placed)) {
+    scene.remove(m);
+    m.traverse(o => { if (o.isMesh) { o.geometry.dispose(); } });
+  }
+  itemMeshes = itemMeshes.filter(o => !o.userData?.placed);
+  for (const p of state.placed) {
+    const it = { id: p.id, type: p.type, x: p.x, y: p.y, w: p.w, h: p.h, label: p.name, action: null, placed: true };
+    const group = new THREE.Group();
+    group.position.set(it.x + it.w / 2, 0, it.y + it.h / 2);
+    buildPlacedMesh(group, it);
+    group.userData.item = it;
+    group.userData.placed = true;
+    group.traverse(o => { if (o.isMesh) o.userData.parentGroup = group; });
+    scene.add(group);
+    itemMeshes.push(group);
+    if (p.type !== 'placedPainting' && p.type !== 'placedRug') {
+      for (let dy = 0; dy < p.h; dy++) {
+        for (let dx = 0; dx < p.w; dx++) {
+          if (p.y + dy < ROWS && p.x + dx < COLS) grid[p.y + dy][p.x + dx] = 2;
+        }
+      }
+    }
+  }
+}
+
+function buildPlacedMesh(group, it) {
+  const add = (geom, color, x, y, z, opts = {}) => {
+    const mat = lamMat(color, opts);
+    const mesh = new THREE.Mesh(geom, mat);
+    mesh.position.set(x, y, z);
+    if (opts.rot) mesh.rotation.set(...opts.rot);
+    mesh.castShadow = opts.cast !== false;
+    mesh.receiveShadow = true;
+    group.add(mesh);
+    return mesh;
+  };
+  switch (it.type) {
+    case 'placedLamp': {
+      add(new THREE.CylinderGeometry(0.15, 0.18, 0.05, 12), 0x2a2a2a, 0, 0.025, 0);
+      add(new THREE.CylinderGeometry(0.025, 0.025, 1.0, 8), 0x2a2a2a, 0, 0.55, 0);
+      add(new THREE.CylinderGeometry(0.18, 0.22, 0.22, 16, 1, true), 0xf5d8a8, 0, 1.15, 0);
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 8), new THREE.MeshBasicMaterial({ color: 0xfdd585 }));
+      bulb.position.y = 1.1; group.add(bulb);
+      const light = new THREE.PointLight(0xfdd585, 0, 4, 1.5);
+      light.position.y = 1.1; group.add(light);
+      lampLights.push({ light, bulb, baseColor: 0xfdd585 });
+      break;
+    }
+    case 'placedPlant': {
+      add(new THREE.CylinderGeometry(0.16, 0.12, 0.22, 12), 0x8b5a3c, 0, 0.11, 0);
+      add(new THREE.SphereGeometry(0.22, 12, 10), 0x4a8c5a, 0, 0.4, 0);
+      add(new THREE.SphereGeometry(0.16, 12, 10), 0x6fa57a, -0.08, 0.48, 0.05);
+      add(new THREE.SphereGeometry(0.14, 12, 10), 0x3a7a4a, 0.1, 0.44, -0.06);
+      break;
+    }
+    case 'placedPainting': {
+      add(rb(0.7, 0.5, 0.04, 0.02), 0x6b4a30, 0, 1.4, -0.46);
+      add(rb(0.6, 0.4, 0.02, 0.005), 0x9bc2d8, 0, 1.4, -0.44);
+      add(rb(0.45, 0.18, 0.005, 0.005), 0x6f9b58, 0, 1.36, -0.435);
+      add(new THREE.SphereGeometry(0.04, 10, 8), 0xfdd585, -0.18, 1.5, -0.435);
+      break;
+    }
+    case 'placedBookshelf': {
+      add(rb(0.85, 1.6, 0.4, 0.03), 0x8b6841, 0, 0.8, 0);
+      for (let i = 0; i < 4; i++) {
+        add(rb(0.8, 0.04, 0.38, 0.005), 0x6b4a30, 0, 0.3 + i * 0.36, 0);
+        for (let b = 0; b < 5; b++) {
+          const colors = [0xa85b5b, 0x5b8aaf, 0x7da85b, 0xa87544, 0x5b5b8a];
+          const h = 0.2 + Math.random() * 0.1;
+          const book = new THREE.Mesh(rb(0.1, h, 0.18, 0.01), lamMat(colors[(i + b) % 5]));
+          book.position.set(-0.3 + b * 0.15, 0.3 + i * 0.36 + h / 2 + 0.04, 0.05);
+          book.castShadow = true; group.add(book);
+        }
+      }
+      add(rb(0.9, 0.04, 0.42, 0.01), 0x6b4a30, 0, 1.6, 0);
+      break;
+    }
+    case 'placedStool': {
+      add(new THREE.CylinderGeometry(0.22, 0.22, 0.06, 12), 0xa07550, 0, 0.45, 0);
+      for (let i = 0; i < 3; i++) {
+        const a = (i / 3) * Math.PI * 2;
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.45, 8), lamMat(0x6b4a30));
+        leg.position.set(Math.cos(a) * 0.18, 0.225, Math.sin(a) * 0.18);
+        leg.castShadow = true; group.add(leg);
+      }
+      break;
+    }
+    case 'placedRug': {
+      const w = it.w * 0.92;
+      const rug = new THREE.Mesh(new THREE.PlaneGeometry(w, it.h * 0.7), lamMat(0xb86b6b));
+      rug.rotation.x = -Math.PI / 2;
+      rug.position.y = 0.013;
+      rug.receiveShadow = true; group.add(rug);
+      const trim = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.95, it.h * 0.62), lamMat(0xd88a8a));
+      trim.rotation.x = -Math.PI / 2;
+      trim.position.y = 0.017;
+      trim.receiveShadow = true; group.add(trim);
+      break;
+    }
+    case 'placedCatBed': {
+      add(new THREE.CylinderGeometry(0.28, 0.32, 0.12, 16), 0xa86b6b, 0, 0.06, 0);
+      add(new THREE.CylinderGeometry(0.22, 0.22, 0.06, 16), 0xf5d8d8, 0, 0.13, 0);
+      add(rb(0.18, 0.12, 0.22, 0.04), 0xfba84a, 0, 0.18, 0);
+      add(new THREE.SphereGeometry(0.07, 10, 8), 0xfba84a, 0, 0.26, -0.06);
+      add(new THREE.SphereGeometry(0.012, 6, 4), 0x1a1a1a, -0.025, 0.27, -0.12);
+      add(new THREE.SphereGeometry(0.012, 6, 4), 0x1a1a1a, 0.025, 0.27, -0.12);
+      break;
+    }
+    case 'placedGuitar': {
+      add(rb(0.06, 0.06, 0.06, 0.01), 0x4a3520, 0, 0.6, 0);
+      add(rb(0.05, 0.85, 0.04, 0.01), 0x6b4a30, 0, 0.7, 0);
+      add(new THREE.CylinderGeometry(0.18, 0.22, 0.08, 16), 0xc88a4a, 0, 0.22, 0, { rot: [0, 0, Math.PI / 2] });
+      add(new THREE.SphereGeometry(0.05, 10, 8), 0x1a1a1a, 0, 0.22, 0.03);
+      break;
+    }
   }
 }
 
@@ -1052,11 +1187,23 @@ function updatePlayerFacing(dir) {
 }
 
 function onPointerDown(e) {
-  if (state.action) return;
+  if (state.action && !state.buildMode) return;
   const rect = canvasEl.getBoundingClientRect();
   pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
   pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
   raycaster.setFromCamera(pointer, camera);
+
+  if (state.buildMode) {
+    const planeY = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const hit = new THREE.Vector3();
+    raycaster.ray.intersectPlane(planeY, hit);
+    if (hit) {
+      const tx = Math.floor(hit.x);
+      const ty = Math.floor(hit.z);
+      tryPlace(tx, ty);
+    }
+    return;
+  }
 
   const hits = raycaster.intersectObjects(itemMeshes, true);
   if (hits.length > 0) {
@@ -1089,6 +1236,28 @@ function onPointerDown(e) {
       }
     }
   }
+}
+
+function tryPlace(tx, ty) {
+  const def = state.buildMode;
+  if (!def) return;
+  for (let dy = 0; dy < def.h; dy++) {
+    for (let dx = 0; dx < def.w; dx++) {
+      const cx = tx + dx, cy = ty + dy;
+      if (cx < 0 || cx >= COLS || cy < 0 || cy >= ROWS) { toast('Hors zone.'); return; }
+      if (grid[cy][cx] !== 0) {
+        if (def.type !== 'placedRug' && def.type !== 'placedPainting') { toast('Case occupée.'); return; }
+        if (grid[cy][cx] === 1) { toast('Pas sur un mur.'); return; }
+      }
+    }
+  }
+  if (state.money < def.price) { toast("Pas assez d'argent."); return; }
+  state.money -= def.price;
+  const placed = { id: def.id + '_' + Date.now(), type: def.type, name: def.name, x: tx, y: ty, w: def.w, h: def.h };
+  state.placed.push(placed);
+  rebuildPlacedItems();
+  toast(`${def.name} posé`);
+  saveGame();
 }
 
 function onResize() {
@@ -1342,8 +1511,9 @@ function updateHUD() {
 
 document.querySelectorAll('.action-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    if (state.action) return;
     const quick = btn.dataset.quick;
+    if (quick === 'build') { openBuildCatalog(); return; }
+    if (state.action) return;
     if (quick === 'call') startAction('call', null);
     if (quick === 'sleep') {
       const bed = ITEMS.find(i => i.id === 'bed');
@@ -1354,6 +1524,36 @@ document.querySelectorAll('.action-btn').forEach(btn => {
       }
     }
   });
+});
+
+function openBuildCatalog() {
+  const m = document.getElementById('modal');
+  document.getElementById('modal-title').textContent = '🔨 Catalogue';
+  const body = document.getElementById('modal-body');
+  body.innerHTML = `<div style="font-size:12px;color:var(--ink-soft);margin-bottom:10px">Tap un objet pour le placer · Argent: <strong style="color:var(--accent)">$${Math.floor(state.money)}</strong></div><div class="catalog"></div>`;
+  const cat = body.querySelector('.catalog');
+  for (const it of BUILD_CATALOG) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'catalog-item';
+    if (state.money < it.price) btn.classList.add('unaffordable');
+    btn.innerHTML = `<span class="ci-icon">${it.icon}</span><span class="ci-name">${it.name}</span><span class="ci-price">$${it.price}</span>`;
+    btn.addEventListener('click', () => {
+      if (state.money < it.price) { toast("Pas assez d'argent."); return; }
+      state.buildMode = it;
+      m.hidden = true;
+      const bar = document.getElementById('build-bar');
+      bar.hidden = false;
+      document.getElementById('build-name').textContent = `${it.icon} ${it.name} · $${it.price}`;
+    });
+    cat.appendChild(btn);
+  }
+  m.hidden = false;
+}
+
+document.getElementById('build-cancel').addEventListener('click', () => {
+  state.buildMode = null;
+  document.getElementById('build-bar').hidden = true;
 });
 
 document.getElementById('cancel-action').addEventListener('click', () => {

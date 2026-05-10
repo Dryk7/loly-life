@@ -333,6 +333,51 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 .modal-actions button.secondary { background: var(--bg-soft); color: var(--ink); }
 
+#build-bar {
+  position: absolute;
+  bottom: 14px; left: 14px; right: 14px;
+  background: var(--card);
+  padding: 12px 14px;
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.build-label { font-size: 13px; color: var(--ink-soft); }
+.build-label strong { color: var(--accent); }
+#build-cancel {
+  padding: 8px 14px;
+  background: var(--bg-soft);
+  color: var(--ink);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.catalog {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 8px;
+}
+.catalog-item {
+  background: var(--bg-soft);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 12px 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  font-size: 12px;
+  color: var(--ink);
+  transition: transform 0.1s, border-color 0.2s;
+  cursor: pointer;
+}
+.catalog-item:active { transform: scale(0.96); }
+.catalog-item .ci-icon { font-size: 28px; line-height: 1; }
+.catalog-item .ci-name { font-weight: 600; }
+.catalog-item .ci-price { color: var(--accent); font-size: 11px; }
+.catalog-item:disabled { opacity: 0.5; cursor: not-allowed; }
+.catalog-item.unaffordable { opacity: 0.55; }
+.catalog-item.unaffordable .ci-price { color: var(--bad); }
+
 #toast {
   position: fixed;
   bottom: calc(80px + env(safe-area-inset-bottom));

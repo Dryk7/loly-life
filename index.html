@@ -100,9 +100,15 @@
     </main>
 
     <footer id="hud-bottom">
-      <button class="action-btn" data-quick="call">📞 Appeler un ami</button>
+      <button class="action-btn" data-quick="build">🔨 Construire</button>
+      <button class="action-btn" data-quick="call">📞 Ami</button>
       <button class="action-btn" data-quick="sleep">😴 Dormir</button>
     </footer>
+
+    <div id="build-bar" hidden>
+      <span class="build-label">📐 Pose : <strong id="build-name">—</strong></span>
+      <button id="build-cancel">Annuler</button>
+    </div>
 
     <div id="modal" class="modal" hidden>
       <div class="modal-card">
