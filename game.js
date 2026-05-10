@@ -28,13 +28,54 @@ const REAL_SEC_PER_GAME_MIN = 0.5;
 const SLEEP_SPEED = 12;
 
 const ZONES = [
-  { name: 'bedroom', x0: 0, y0: 0, x1: 10, y1: 5, color: 0xc8a8e0 },
-  { name: 'bath', x0: 0, y0: 5, x1: 5, y1: 8, color: 0x9bcae0 },
-  { name: 'office', x0: 5, y0: 5, x1: 10, y1: 8, color: 0xe8b58a },
-  { name: 'kitchen', x0: 0, y0: 8, x1: 5, y1: 13, color: 0xe8c860 },
-  { name: 'living', x0: 5, y0: 8, x1: 10, y1: 13, color: 0x9ec888 },
-  { name: 'terrace', x0: 0, y0: 13, x1: 10, y1: 18, color: 0x8c6440, outdoor: true },
+  { name: 'bedroom', x0: 0, y0: 0, x1: 10, y1: 5, color: 0xc8a8e0, pattern: 'carpet' },
+  { name: 'bath', x0: 0, y0: 5, x1: 5, y1: 8, color: 0x9bcae0, pattern: 'tile' },
+  { name: 'office', x0: 5, y0: 5, x1: 10, y1: 8, color: 0xe8b58a, pattern: 'wood' },
+  { name: 'kitchen', x0: 0, y0: 8, x1: 5, y1: 13, color: 0xe8c860, pattern: 'tile' },
+  { name: 'living', x0: 5, y0: 8, x1: 10, y1: 13, color: 0x9ec888, pattern: 'wood' },
+  { name: 'terrace', x0: 0, y0: 13, x1: 10, y1: 18, color: 0x8c6440, outdoor: true, pattern: 'wood' },
 ];
+
+function makeFloorTexture(hex, pattern) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 96;
+  const ctx = c.getContext('2d');
+  const r = (hex >> 16) & 0xff, g = (hex >> 8) & 0xff, b = hex & 0xff;
+  ctx.fillStyle = `rgb(${r},${g},${b})`;
+  ctx.fillRect(0, 0, 96, 96);
+  if (pattern === 'tile') {
+    ctx.strokeStyle = `rgba(0,0,0,0.18)`;
+    ctx.lineWidth = 1.2;
+    for (let i = 0; i <= 96; i += 32) {
+      ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 96); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(96, i); ctx.stroke();
+    }
+    ctx.fillStyle = `rgba(255,255,255,0.06)`;
+    for (let y = 0; y < 96; y += 32) for (let x = 0; x < 96; x += 32) ctx.fillRect(x + 2, y + 2, 4, 4);
+  } else if (pattern === 'wood') {
+    for (let i = 0; i < 96; i += 24) {
+      ctx.fillStyle = `rgba(${Math.max(0, r - 18)},${Math.max(0, g - 18)},${Math.max(0, b - 18)},1)`;
+      ctx.fillRect(i, 0, 1, 96);
+      ctx.fillStyle = `rgba(0,0,0,0.18)`;
+      ctx.fillRect(i + 1, 0, 0.5, 96);
+    }
+    ctx.fillStyle = `rgba(0,0,0,0.12)`;
+    ctx.fillRect(0, 28, 24, 1);
+    ctx.fillRect(24, 60, 24, 1);
+    ctx.fillRect(48, 16, 24, 1);
+    ctx.fillRect(72, 72, 24, 1);
+  } else if (pattern === 'carpet') {
+    ctx.fillStyle = `rgba(0,0,0,0.08)`;
+    for (let y = 4; y < 96; y += 8) for (let x = 4; x < 96; x += 8) ctx.fillRect(x, y, 2, 2);
+    ctx.fillStyle = `rgba(255,255,255,0.04)`;
+    for (let y = 0; y < 96; y += 8) for (let x = 0; x < 96; x += 8) ctx.fillRect(x, y, 1, 1);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
 
 const INNER_WALLS_INTERIOR = [
   [1,5],[3,5],[4,5],[5,5],[6,5],[8,5],[9,5],
@@ -496,7 +537,9 @@ function buildWorld() {
     const w = zone.x1 - zone.x0;
     const h = zone.y1 - zone.y0;
     const geom = new THREE.PlaneGeometry(w, h);
-    const mat = new THREE.MeshLambertMaterial({ color: zone.color });
+    const tex = makeFloorTexture(zone.color, zone.pattern || 'carpet');
+    tex.repeat.set(w, h);
+    const mat = new THREE.MeshLambertMaterial({ map: tex });
     const mesh = new THREE.Mesh(geom, mat);
     mesh.rotation.x = -Math.PI / 2;
     mesh.position.set(zone.x0 + w / 2, 0.01, zone.y0 + h / 2);
