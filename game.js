@@ -658,7 +658,7 @@ function applyLoaded(s) {
   state.weatherDay = s.weatherDay || 1;
   state.quests = Array.isArray(s.quests) ? s.quests : [];
   state.questsDay = s.questsDay || 0;
-  state.achievements = Array.isArray(s.achievements) ? s.achievements : [];
+  state.achievements = Array.isArray(s.achievements) ? s.achievements.filter(a => ACHIEVEMENTS.some(x => x.id === a)) : [];
   state.bank = s.bank || 0;
   state.stats = { ...state.stats, ...(s.stats || {}) };
   state.friends = Array.isArray(s.friends) ? s.friends : [];
@@ -1760,11 +1760,10 @@ function spawnVisitor() {
   visitorState.x = 5; visitorState.y = 14;
   visitorState.active = true; visitorState.idle = 0; visitorState.target = null;
   visitorGroup = new THREE.Group();
-  const skinMat = new THREE.MeshLambertMaterial({ color: 0xb88660 });
-  const shirtMat = new THREE.MeshLambertMaterial({ color: 0xa85b5b });
-  const pantsMat = new THREE.MeshLambertMaterial({ color: 0x3c4a5c });
-  const hairMat = new THREE.MeshLambertMaterial({ color: 0x5c3d1e });
-  visitorGroup.add(Object.assign(new THREE.Mesh(rb(0.4, 0.5, 0.22, 0.05), shirtMat), { castShadow: true, position: { x: 0, y: 0.85, z: 0 } }));
+  const skinMat = new THREE.MeshStandardMaterial({ color: 0xb88660, roughness: 0.85, envMapIntensity: 0.3 });
+  const shirtMat = new THREE.MeshStandardMaterial({ color: 0xa85b5b, roughness: 0.8, envMapIntensity: 0.3 });
+  const pantsMat = new THREE.MeshStandardMaterial({ color: 0x3c4a5c, roughness: 0.8 });
+  const hairMat = new THREE.MeshStandardMaterial({ color: 0x5c3d1e, roughness: 0.9 });
   const torso = new THREE.Mesh(rb(0.4, 0.5, 0.22, 0.05), shirtMat);
   torso.position.y = 0.85; torso.castShadow = true;
   visitorGroup.add(torso);
@@ -1787,6 +1786,7 @@ function spawnVisitor() {
 
 function chatVisitor() {
   if (!visitorState.active) return;
+  visitorState.idle = 0;
   state.needs.social = Math.min(100, state.needs.social + 25);
   state.needs.fun = Math.min(100, state.needs.fun + 12);
   spawnEmote('💬');
@@ -1830,9 +1830,16 @@ function applyWeatherDailyMood() {
   state.needs.energy = Math.max(0, Math.min(100, state.needs.energy + w.moodEnergy));
 }
 
+function disposeParticles(p) {
+  if (!p) return;
+  scene.remove(p);
+  if (p.geometry) p.geometry.dispose();
+  if (p.material) p.material.dispose();
+}
+
 function ensureWeatherParticles() {
   if (state.weather === 'rainy' || state.weather === 'storm') {
-    if (snowParticles) snowParticles.visible = false;
+    if (snowParticles) { disposeParticles(snowParticles); snowParticles = null; }
     if (!rainParticles) {
       const count = 600;
       const geom = new THREE.BufferGeometry();
@@ -1852,7 +1859,7 @@ function ensureWeatherParticles() {
     }
     rainParticles.visible = true;
   } else if (state.weather === 'snowy') {
-    if (rainParticles) rainParticles.visible = false;
+    if (rainParticles) { disposeParticles(rainParticles); rainParticles = null; }
     if (!snowParticles) {
       const count = 350;
       const geom = new THREE.BufferGeometry();
@@ -1876,8 +1883,8 @@ function ensureWeatherParticles() {
     }
     snowParticles.visible = true;
   } else {
-    if (rainParticles) rainParticles.visible = false;
-    if (snowParticles) snowParticles.visible = false;
+    if (rainParticles) { disposeParticles(rainParticles); rainParticles = null; }
+    if (snowParticles) { disposeParticles(snowParticles); snowParticles = null; }
   }
 }
 
@@ -1941,7 +1948,11 @@ function updateQuestsBadge() {
   if (fab) fab.style.display = state.quests.length ? 'flex' : 'none';
 }
 
+let lastAchCheck = 0;
 function checkAchievements() {
+  const now = performance.now();
+  if (now - lastAchCheck < 1000) return;
+  lastAchCheck = now;
   for (const ach of ACHIEVEMENTS) {
     if (state.achievements.includes(ach.id)) continue;
     if (ach.cond(state)) {
@@ -2996,9 +3007,9 @@ function buildItemMeshes(group, it) {
 
 function buildCat() {
   catGroup = new THREE.Group();
-  const furMat = new THREE.MeshLambertMaterial({ color: 0xc8a070 });
-  const stripeMat = new THREE.MeshLambertMaterial({ color: 0x8a6040 });
-  const noseMat = new THREE.MeshLambertMaterial({ color: 0xe89a8a });
+  const furMat = new THREE.MeshStandardMaterial({ color: 0xc8a070, roughness: 0.85, metalness: 0.0, envMapIntensity: 0.3 });
+  const stripeMat = new THREE.MeshStandardMaterial({ color: 0x8a6040, roughness: 0.85, metalness: 0.0 });
+  const noseMat = new THREE.MeshStandardMaterial({ color: 0xe89a8a, roughness: 0.7 });
 
   const body = new THREE.Mesh(rb(0.34, 0.2, 0.5, 0.07), furMat);
   body.position.y = 0.18; body.castShadow = true; body.receiveShadow = true;
@@ -3667,7 +3678,8 @@ function tick(dt) {
   let timeStep = dt / REAL_SEC_PER_GAME_MIN;
   if (state.action?.fast) timeStep *= SLEEP_SPEED;
   state.timeMin += timeStep;
-  while (state.timeMin >= DAY_MIN) {
+  let dayIters = 0;
+  while (state.timeMin >= DAY_MIN && dayIters++ < 5) {
     state.timeMin -= DAY_MIN;
     state.day++;
     state.weather = rollWeather();
@@ -3678,6 +3690,7 @@ function tick(dt) {
     showWeatherBadge();
     toast(`📅 Jour ${state.day} · ${WEATHERS.find(w => w.id === state.weather).label}`, 3500);
   }
+  if (state.timeMin >= DAY_MIN) state.timeMin = state.timeMin % DAY_MIN;
 
   if (state.path && state.path.length && !state.action) {
     const speed = 4;
@@ -3766,7 +3779,7 @@ function updateFlickers() {
       const noise = Math.sin(t * 11) * 0.25 + Math.sin(t * 23.7) * 0.15 + Math.sin(t * 5.3) * 0.1;
       f.mesh.material.emissiveIntensity = f.base + noise;
     } else if (f.type === 'screen') {
-      const flick = (Math.sin(t * 7) > 0.5) ? 1 : 0.7;
+      const flick = 0.85 + Math.sin(t * 8) * 0.15 + Math.sin(t * 17) * 0.05;
       f.mesh.material.emissiveIntensity = f.base * flick + 0.1;
       const hue = 0.55 + Math.sin(t * 0.8) * 0.1;
       f.mesh.material.color.setHSL(hue, 0.5, 0.55);
@@ -3911,6 +3924,8 @@ function finishAction() {
   state.action = null;
   document.getElementById('action-panel').hidden = true;
   resetPlayerPose();
+  if (cookFlameGroup) cookFlameGroup.visible = false;
+  if (showerStreamGroup) showerStreamGroup.visible = false;
   saveGame();
 }
 
@@ -4048,6 +4063,8 @@ document.getElementById('cancel-action').addEventListener('click', () => {
     state.action = null;
     document.getElementById('action-panel').hidden = true;
     resetPlayerPose();
+    if (cookFlameGroup) cookFlameGroup.visible = false;
+    if (showerStreamGroup) showerStreamGroup.visible = false;
   }
 });
 
@@ -4361,6 +4378,10 @@ if (randomBtn) randomBtn.addEventListener('click', () => {
 function startGame() {
   bootEl.hidden = true;
   gameEl.hidden = false;
+  lastEventDay = 0;
+  lastBillDay = 0;
+  lastWeatherDay = 0;
+  lastQuestsDay = 0;
   init3D();
   updateHUD();
   if (!state.quests || state.quests.length === 0) generateQuests();
