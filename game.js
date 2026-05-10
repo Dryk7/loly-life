@@ -1,4 +1,22 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+function rb(w, h, d, r = 0.05, segs = 2) {
+  return new RoundedBoxGeometry(w, h, d, segs, Math.min(r, w / 2 - 0.001, h / 2 - 0.001, d / 2 - 0.001));
+}
+function lamMat(color, opts = {}) {
+  return new THREE.MeshLambertMaterial({
+    color,
+    emissive: opts.emissive || 0x000000,
+    emissiveIntensity: opts.emissiveIntensity || 0,
+  });
+}
 
 const COLS = 10;
 const ROWS = 14;
@@ -221,19 +239,25 @@ function applyLoaded(s) {
   }
 }
 
-let scene, camera, renderer, sun, hemi, ambientNight;
-let playerGroup, playerLegL, playerLegR, playerArmL, playerArmR, playerHead, playerHair;
+let scene, camera, renderer, sun, hemi, ambientNight, sunFill;
+let playerGroup, playerLegL, playerLegR, playerArmL, playerArmR, playerHead, playerHair, playerEyeL, playerEyeR;
 let raycaster, pointer;
 let itemMeshes = [];
 let windowMeshes = [];
+let lampLights = [];
+let particleSystems = [];
+let composer, bloomPass, fxaaPass;
 let floorMesh;
+let blinkTimer = 0;
 
 const canvasEl = document.getElementById('canvas');
 
 function init3D() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x1a1428);
-  scene.fog = new THREE.Fog(0x1a1428, 18, 32);
+  const stage0 = document.getElementById('stage');
+  if (stage0) stage0.style.background = '#0e0a18';
+  scene.fog = null;
 
   const stage = document.getElementById('stage');
   const w = stage.clientWidth || 360;
@@ -244,14 +268,26 @@ function init3D() {
   camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 0.1, 100);
   positionCamera();
 
-  renderer = new THREE.WebGLRenderer({ canvas: canvasEl, antialias: true });
+  renderer = new THREE.WebGLRenderer({ canvas: canvasEl, antialias: false });
   renderer.setSize(w, h, false);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.NoToneMapping;
+  renderer.toneMappingExposure = 1.0;
 
-  hemi = new THREE.HemisphereLight(0xfff5d0, 0x404060, 0.55);
+  composer = new EffectComposer(renderer);
+  composer.setSize(w, h);
+  composer.addPass(new RenderPass(scene, camera));
+  bloomPass = new UnrealBloomPass(new THREE.Vector2(w, h), 0.7, 0.4, 0.85);
+  composer.addPass(bloomPass);
+  fxaaPass = new ShaderPass(FXAAShader);
+  fxaaPass.material.uniforms['resolution'].value.set(1 / (w * renderer.getPixelRatio()), 1 / (h * renderer.getPixelRatio()));
+  composer.addPass(fxaaPass);
+  composer.addPass(new OutputPass());
+
+  hemi = new THREE.HemisphereLight(0xfff5d0, 0x8b6f47, 0.55);
   scene.add(hemi);
 
   sun = new THREE.DirectionalLight(0xffeac0, 0.85);
@@ -306,7 +342,7 @@ function buildWorld() {
     const mat = new THREE.MeshLambertMaterial({ color: zone.color });
     const mesh = new THREE.Mesh(geom, mat);
     mesh.rotation.x = -Math.PI / 2;
-    mesh.position.set(zone.x0 + w / 2, 0, zone.y0 + h / 2);
+    mesh.position.set(zone.x0 + w / 2, 0.01, zone.y0 + h / 2);
     mesh.receiveShadow = true;
     scene.add(mesh);
   }
@@ -373,7 +409,7 @@ function buildItems() {
 function buildItemMeshes(group, it) {
   const w = it.w, h = it.h;
   const add = (geom, color, x, y, z, opts = {}) => {
-    const mat = new THREE.MeshLambertMaterial({ color, emissive: opts.emissive || 0x000000, emissiveIntensity: opts.emissiveIntensity || 0 });
+    const mat = lamMat(color, opts);
     const mesh = new THREE.Mesh(geom, mat);
     mesh.position.set(x, y, z);
     if (opts.rot) mesh.rotation.set(...opts.rot);
@@ -385,81 +421,174 @@ function buildItemMeshes(group, it) {
 
   switch (it.type) {
     case 'bed': {
-      add(new THREE.BoxGeometry(w * 0.95, 0.3, h * 0.92), 0x6b4a30, 0, 0.15, 0);
-      add(new THREE.BoxGeometry(w * 0.85, 0.18, h * 0.82), 0x5b7db1, 0, 0.39, 0);
-      add(new THREE.BoxGeometry(0.5, 0.12, h * 0.4), 0xf5e6d3, -w * 0.28, 0.55, 0);
-      add(new THREE.BoxGeometry(0.05, 0.7, h * 0.92), 0x8b6841, -w * 0.5 + 0.025, 0.35, 0);
+      add(rb(w * 0.96, 0.32, h * 0.94, 0.04), 0x6b4a30, 0, 0.16, 0);
+      add(rb(0.06, 0.7, h * 0.94, 0.02), 0x8b6841, -w * 0.5 + 0.03, 0.5, 0);
+      add(rb(0.05, 0.4, h * 0.94, 0.02), 0x8b6841, w * 0.5 - 0.025, 0.35, 0);
+      add(rb(w * 0.86, 0.18, h * 0.84, 0.03), 0xf5ecd0, 0, 0.41, 0);
+      add(rb(w * 0.86, 0.05, h * 0.5, 0.02), 0x5b7db1, 0, 0.52, h * 0.18);
+      add(rb(0.5, 0.13, h * 0.42, 0.04), 0xffffff, -w * 0.28, 0.57, 0);
+      add(rb(0.45, 0.04, h * 0.4, 0.02), 0xe8d8c0, -w * 0.28, 0.64, 0);
+      add(rb(0.34, 0.1, h * 0.34, 0.03), 0xf5d8d8, w * 0.22, 0.55, 0);
       break;
     }
     case 'wardrobe': {
-      add(new THREE.BoxGeometry(0.85, 1.8, 0.5), 0x8b6841, 0, 0.9, 0);
-      add(new THREE.BoxGeometry(0.04, 1.7, 0.04), 0x3a2818, 0, 0.85, 0.27);
-      add(new THREE.BoxGeometry(0.06, 0.06, 0.06), 0xd4a857, -0.18, 0.85, 0.27);
-      add(new THREE.BoxGeometry(0.06, 0.06, 0.06), 0xd4a857, 0.18, 0.85, 0.27);
+      add(rb(0.85, 1.8, 0.5, 0.04), 0x8b6841, 0, 0.9, 0);
+      add(rb(0.78, 1.6, 0.04, 0.02), 0x6b4a30, 0, 0.9, 0.255);
+      add(new THREE.BoxGeometry(0.04, 1.7, 0.06), 0x3a2818, 0, 0.9, 0.27);
+      add(rb(0.32, 0.9, 0.03, 0.02), 0xa07b50, -0.18, 1.1, 0.27);
+      add(rb(0.32, 0.9, 0.03, 0.02), 0xa07b50, 0.18, 1.1, 0.27);
+      add(new THREE.SphereGeometry(0.04, 8, 6), 0xd4a857, -0.06, 0.85, 0.29);
+      add(new THREE.SphereGeometry(0.04, 8, 6), 0xd4a857, 0.06, 0.85, 0.29);
+      add(rb(0.9, 0.06, 0.55, 0.02), 0x6b4a30, 0, 1.83, 0);
+      add(rb(0.95, 0.04, 0.6, 0.01), 0x5a3a20, 0, 1.86, 0);
       break;
     }
     case 'shower': {
-      add(new THREE.BoxGeometry(0.9, 0.05, 0.9), 0xc0c0c0, 0, 0.025, 0);
-      add(new THREE.BoxGeometry(0.85, 1.6, 0.85), 0xa8c5d4, 0, 0.85, 0, { cast: false });
-      const showerMat = group.children[group.children.length - 1].material;
-      showerMat.transparent = true;
-      showerMat.opacity = 0.45;
-      add(new THREE.CylinderGeometry(0.08, 0.08, 0.05, 8), 0x7ec6e0, 0, 1.7, -0.2);
+      add(rb(0.92, 0.04, 0.92, 0.01), 0xb0b8c0, 0, 0.02, 0);
+      for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 4; j++) {
+          const tile = add(new THREE.BoxGeometry(0.2, 0.005, 0.2), (i + j) % 2 ? 0xc8d4dc : 0xb0c0cc, -0.3 + i * 0.2, 0.025, -0.3 + j * 0.2, { cast: false });
+        }
+      }
+      add(new THREE.CylinderGeometry(0.04, 0.04, 0.005, 12), 0x4a4a4a, 0, 0.025, 0, { cast: false });
+      const tileMat = lamMat(0xa8c5d4, { roughness: 0.3 });
+      tileMat.transparent = true; tileMat.opacity = 0.35;
+      const wall1 = new THREE.Mesh(rb(0.04, 1.8, 0.92, 0.01), tileMat);
+      wall1.position.set(-0.46, 0.9, 0); wall1.receiveShadow = true; group.add(wall1);
+      const wall2 = new THREE.Mesh(rb(0.92, 1.8, 0.04, 0.01), tileMat);
+      wall2.position.set(0, 0.9, -0.46); wall2.receiveShadow = true; group.add(wall2);
+      add(new THREE.CylinderGeometry(0.025, 0.025, 0.5, 8), 0x9098a0, 0.0, 1.45, -0.4);
+      add(new THREE.CylinderGeometry(0.05, 0.08, 0.07, 12, 1, false), 0xc8d8e0, 0.0, 1.65, -0.18, { rot: [Math.PI / 2.5, 0, 0] });
+      add(rb(0.32, 0.04, 0.12, 0.01), 0xe8eef2, -0.3, 1.0, -0.4);
+      add(rb(0.12, 0.06, 0.06, 0.01), 0xf4d8a0, -0.3, 1.05, -0.4);
       break;
     }
     case 'toilet': {
-      add(new THREE.BoxGeometry(0.55, 0.5, 0.55), 0xf0f0f0, 0, 0.25, 0);
-      add(new THREE.BoxGeometry(0.5, 0.55, 0.18), 0xf0f0f0, 0, 0.55, -0.2);
-      add(new THREE.BoxGeometry(0.4, 0.06, 0.4), 0xa8c5d4, 0, 0.53, 0.05);
+      add(new THREE.CylinderGeometry(0.22, 0.18, 0.32, 16), 0xfafafa, 0, 0.16, 0.05);
+      add(new THREE.TorusGeometry(0.22, 0.04, 8, 16), 0xfafafa, 0, 0.34, 0.05, { rot: [Math.PI / 2, 0, 0] });
+      add(rb(0.5, 0.55, 0.16, 0.03), 0xfafafa, 0, 0.55, -0.2);
+      add(rb(0.46, 0.04, 0.18, 0.02), 0xeaeaea, 0, 0.85, -0.2);
+      add(rb(0.4, 0.04, 0.4, 0.02), 0x8b9aa8, 0, 0.36, 0.05);
+      add(rb(0.05, 0.05, 0.05, 0.01), 0xc5d2dc, 0.1, 0.79, -0.18);
+      add(rb(0.12, 0.06, 0.04, 0.01), 0xf5f0e8, 0.32, 0.6, -0.32);
       break;
     }
     case 'computer': {
-      add(new THREE.BoxGeometry(0.85, 0.5, 0.5), 0x6b4a30, 0, 0.25, 0);
-      add(new THREE.BoxGeometry(0.55, 0.4, 0.06), 0x2c3e50, 0, 0.7, -0.18);
-      add(new THREE.BoxGeometry(0.45, 0.3, 0.04), 0x1a8fb8, 0, 0.7, -0.16, { emissive: 0x1a8fb8, emissiveIntensity: 0.3 });
-      add(new THREE.BoxGeometry(0.35, 0.04, 0.18), 0x1a1a1a, 0, 0.52, 0.1);
+      add(rb(0.95, 0.06, 0.6, 0.02), 0xd8c8a0, 0, 0.85, 0);
+      add(new THREE.BoxGeometry(0.04, 0.85, 0.04), 0x6b4a30, -0.42, 0.42, 0.27);
+      add(new THREE.BoxGeometry(0.04, 0.85, 0.04), 0x6b4a30, 0.42, 0.42, 0.27);
+      add(new THREE.BoxGeometry(0.04, 0.85, 0.04), 0x6b4a30, -0.42, 0.42, -0.27);
+      add(new THREE.BoxGeometry(0.04, 0.85, 0.04), 0x6b4a30, 0.42, 0.42, -0.27);
+      add(rb(0.55, 0.04, 0.18, 0.01), 0x2c2c2c, 0, 0.91, -0.18);
+      add(rb(0.5, 0.36, 0.04, 0.02), 0x1a1a1a, 0, 1.18, -0.2);
+      add(rb(0.46, 0.32, 0.02, 0.01), 0x4ac0e8, 0, 1.18, -0.18, { emissive: 0x4ac0e8, emissiveIntensity: 0.55 });
+      add(rb(0.36, 0.02, 0.14, 0.005), 0x222, 0, 0.92, 0.05);
+      const keyMat = lamMat(0x444);
+      for (let kx = 0; kx < 8; kx++) {
+        for (let ky = 0; ky < 3; ky++) {
+          const k = new THREE.Mesh(rb(0.03, 0.012, 0.03, 0.005), keyMat);
+          k.position.set(-0.16 + kx * 0.045, 0.94, 0.005 + ky * 0.045);
+          k.castShadow = true; group.add(k);
+        }
+      }
+      add(rb(0.06, 0.025, 0.04, 0.01), 0x1a1a1a, 0.25, 0.92, 0.18);
+      add(new THREE.CylinderGeometry(0.06, 0.07, 0.1, 12), 0xf5e6d3, -0.32, 0.93, 0.12);
+      add(new THREE.CylinderGeometry(0.05, 0.06, 0.005, 12), 0x6c4d2a, -0.32, 0.99, 0.12, { cast: false });
+      add(rb(0.18, 0.02, 0.13, 0.005), 0xf5f0e8, -0.3, 0.92, -0.05);
       break;
     }
     case 'plant': {
-      add(new THREE.CylinderGeometry(0.18, 0.14, 0.25, 8), 0x8b5a3c, 0, 0.125, 0);
-      add(new THREE.SphereGeometry(0.25, 10, 8), 0x4a8c5a, 0, 0.45, 0);
-      add(new THREE.SphereGeometry(0.18, 10, 8), 0x5fa572, -0.1, 0.55, 0.05);
-      add(new THREE.SphereGeometry(0.18, 10, 8), 0x3a7a4a, 0.12, 0.5, -0.08);
+      add(new THREE.CylinderGeometry(0.18, 0.14, 0.27, 12), 0x9c5e3c, 0, 0.135, 0);
+      add(new THREE.CylinderGeometry(0.19, 0.18, 0.04, 12), 0x7c4a2c, 0, 0.27, 0);
+      add(new THREE.CylinderGeometry(0.16, 0.16, 0.02, 12), 0x3a2818, 0, 0.275, 0, { cast: false });
+      const leafMat = lamMat(0x4a8c5a);
+      const leafMat2 = lamMat(0x6fa57a);
+      const leafMat3 = lamMat(0x3a7a4a);
+      const ls = [
+        [0, 0.5, 0, 0.22, leafMat],
+        [-0.13, 0.55, 0.05, 0.16, leafMat2],
+        [0.12, 0.5, -0.08, 0.18, leafMat3],
+        [0.05, 0.65, 0.12, 0.14, leafMat2],
+        [-0.08, 0.42, -0.1, 0.13, leafMat3],
+        [0.0, 0.78, -0.02, 0.11, leafMat2],
+      ];
+      for (const [x, y, z, r, m] of ls) {
+        const leaf = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), m);
+        leaf.position.set(x, y, z);
+        leaf.castShadow = true; leaf.scale.y = 0.8 + Math.random() * 0.5;
+        group.add(leaf);
+      }
       break;
     }
     case 'fridge': {
-      add(new THREE.BoxGeometry(0.7, 1.5, 0.55), 0xe8e8e8, 0, 0.75, 0);
-      add(new THREE.BoxGeometry(0.72, 0.04, 0.57), 0xb8b8b8, 0, 0.75, 0);
-      add(new THREE.BoxGeometry(0.04, 0.18, 0.04), 0x888, 0.27, 0.4, 0.27);
-      add(new THREE.BoxGeometry(0.04, 0.18, 0.04), 0x888, 0.27, 1.1, 0.27);
+      add(rb(0.7, 1.6, 0.55, 0.04), 0xf2f2f2, 0, 0.8, 0);
+      add(rb(0.72, 0.04, 0.57, 0.01), 0xc8c8c8, 0, 0.85, 0);
+      add(rb(0.65, 0.5, 0.04, 0.02), 0xeaeaea, 0, 0.4, 0.275);
+      add(rb(0.65, 1.0, 0.04, 0.02), 0xeaeaea, 0, 1.2, 0.275);
+      add(rb(0.05, 0.22, 0.05, 0.01), 0x404040, 0.27, 0.45, 0.3);
+      add(rb(0.05, 0.22, 0.05, 0.01), 0x404040, 0.27, 1.15, 0.3);
+      add(rb(0.06, 0.06, 0.01, 0.01), 0xff8848, -0.15, 1.45, 0.305);
+      add(rb(0.05, 0.05, 0.01, 0.01), 0x4a90c8, 0.0, 1.4, 0.305);
+      add(rb(0.05, 0.07, 0.01, 0.01), 0x7eb87a, 0.15, 1.55, 0.305);
+      add(rb(0.16, 0.18, 0.04, 0.01), 0xc8d4dc, -0.22, 0.7, 0.275);
       break;
     }
     case 'stove': {
-      add(new THREE.BoxGeometry(0.85, 0.85, 0.55), 0x3d3d3d, 0, 0.425, 0);
-      add(new THREE.BoxGeometry(0.8, 0.04, 0.5), 0x5a5a5a, 0, 0.85, 0);
-      add(new THREE.CylinderGeometry(0.1, 0.1, 0.04, 12), 0x1a1a1a, -0.18, 0.87, -0.08);
-      add(new THREE.CylinderGeometry(0.1, 0.1, 0.04, 12), 0x1a1a1a, 0.18, 0.87, -0.08);
-      add(new THREE.CylinderGeometry(0.06, 0.06, 0.045, 8), 0xff6b35, -0.18, 0.88, -0.08, { emissive: 0xff6b35, emissiveIntensity: 0.5 });
+      add(rb(0.85, 0.9, 0.55, 0.04), 0x3d3d3d, 0, 0.45, 0);
+      add(rb(0.82, 0.04, 0.52, 0.01), 0x202020, 0, 0.92, 0);
+      add(new THREE.CylinderGeometry(0.11, 0.11, 0.025, 16), 0x1a1a1a, -0.2, 0.94, -0.1);
+      add(new THREE.CylinderGeometry(0.11, 0.11, 0.025, 16), 0x1a1a1a, 0.2, 0.94, -0.1);
+      add(new THREE.CylinderGeometry(0.09, 0.09, 0.025, 16), 0x1a1a1a, -0.2, 0.94, 0.1);
+      add(new THREE.CylinderGeometry(0.09, 0.09, 0.025, 16), 0x1a1a1a, 0.2, 0.94, 0.1);
+      add(new THREE.CylinderGeometry(0.07, 0.07, 0.03, 8), 0xff6b35, -0.2, 0.96, -0.1, { emissive: 0xff8855, emissiveIntensity: 0.9 });
+      for (let i = 0; i < 4; i++) {
+        const k = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.04, 12), lamMat(0xc0c0c0));
+        k.position.set(-0.3 + i * 0.2, 0.7, 0.275); k.rotation.x = Math.PI / 2; k.castShadow = true; group.add(k);
+      }
+      add(rb(0.7, 0.42, 0.04, 0.02), 0x202020, 0, 0.27, 0.275);
+      add(rb(0.4, 0.18, 0.02, 0.01), 0x4a3520, 0, 0.27, 0.295);
+      add(rb(0.36, 0.14, 0.01, 0.01), 0xff8848, 0, 0.27, 0.31, { emissive: 0xff6b35, emissiveIntensity: 0.5 });
+      add(rb(0.05, 0.04, 0.04, 0.01), 0xc0c0c0, 0.28, 0.27, 0.3);
       break;
     }
     case 'counter': {
-      add(new THREE.BoxGeometry(0.85, 0.85, 0.55), 0x6b4a30, 0, 0.425, 0);
-      add(new THREE.BoxGeometry(0.9, 0.06, 0.6), 0xd8c8a0, 0, 0.88, 0);
+      add(rb(0.85, 0.88, 0.55, 0.03), 0xa07550, 0, 0.44, 0);
+      add(rb(0.92, 0.06, 0.62, 0.02), 0xe8d6a8, 0, 0.91, 0);
+      add(rb(0.94, 0.02, 0.64, 0.005), 0xfff4d0, 0, 0.945, 0, { roughness: 0.3 });
+      add(rb(0.85, 0.04, 0.05, 0.01), 0x6b4a30, 0, 0.7, 0.27);
+      add(rb(0.85, 0.04, 0.05, 0.01), 0x6b4a30, 0, 0.4, 0.27);
+      add(rb(0.04, 0.34, 0.04, 0.01), 0x6b4a30, -0.4, 0.55, 0.275);
+      add(rb(0.04, 0.34, 0.04, 0.01), 0x6b4a30, 0.4, 0.55, 0.275);
+      add(rb(0.22, 0.02, 0.18, 0.005), 0xc8a070, -0.18, 0.95, 0.05);
+      add(rb(0.04, 0.04, 0.04, 0.005), 0xa86666, 0.05, 0.95, 0.05);
+      add(rb(0.18, 0.16, 0.06, 0.01), 0x202020, 0.18, 1.0, 0);
+      add(rb(0.02, 0.18, 0.005, 0.005), 0xc0c0c0, 0.13, 1.05, 0.04);
+      add(rb(0.02, 0.16, 0.005, 0.005), 0xc0c0c0, 0.18, 1.04, 0.04);
+      add(new THREE.SphereGeometry(0.06, 10, 8), 0xd84a3a, -0.32, 0.97, -0.05);
+      add(new THREE.SphereGeometry(0.05, 10, 8), 0xd8a050, -0.22, 0.97, -0.08);
+      add(new THREE.SphereGeometry(0.055, 10, 8), 0x9bbf3e, -0.27, 0.97, 0.04);
       break;
     }
     case 'tv': {
-      add(new THREE.BoxGeometry(0.7, 0.45, 0.06), 0x1a1a1a, 0, 0.95, -0.2);
-      add(new THREE.BoxGeometry(0.6, 0.36, 0.04), 0x3a7a9a, 0, 0.95, -0.18, { emissive: 0x5b9fc8, emissiveIntensity: 0.3 });
-      add(new THREE.BoxGeometry(0.85, 0.6, 0.5), 0x6b4a30, 0, 0.3, 0);
+      add(rb(0.95, 0.5, 0.5, 0.03), 0x4a3520, 0, 0.25, 0);
+      add(rb(0.92, 0.04, 0.52, 0.01), 0x6b4a30, 0, 0.52, 0);
+      add(rb(0.85, 0.06, 0.45, 0.01), 0x2a2a2a, 0, 0.05, 0);
+      add(rb(0.85, 0.55, 0.06, 0.02), 0x1a1a1a, 0, 0.95, -0.21);
+      add(rb(0.78, 0.46, 0.02, 0.005), 0x4ac0e8, 0, 0.95, -0.19, { emissive: 0x4ac0e8, emissiveIntensity: 0.7 });
+      add(rb(0.5, 0.06, 0.08, 0.01), 0x202020, 0, 0.6, -0.15);
+      add(rb(0.04, 0.02, 0.08, 0.005), 0x202020, -0.32, 0.55, 0.05);
+      add(rb(0.04, 0.04, 0.04, 0.005), 0xff4444, -0.32, 0.56, 0.07, { emissive: 0xff4444, emissiveIntensity: 0.4 });
       break;
     }
     case 'sofa': {
-      add(new THREE.BoxGeometry(w * 0.95, 0.35, 0.65), 0xa85b5b, 0, 0.2, 0);
-      add(new THREE.BoxGeometry(w * 0.95, 0.45, 0.18), 0xc97a7a, 0, 0.6, -0.27);
-      add(new THREE.BoxGeometry(0.18, 0.3, 0.65), 0x8a4848, -w * 0.4, 0.55, 0);
-      add(new THREE.BoxGeometry(0.18, 0.3, 0.65), 0x8a4848, w * 0.4, 0.55, 0);
-      add(new THREE.BoxGeometry(0.32, 0.18, 0.32), 0xf5d8d8, -w * 0.18, 0.5, 0.1);
-      add(new THREE.BoxGeometry(0.32, 0.18, 0.32), 0xf5d8d8, w * 0.18, 0.5, 0.1);
+      add(rb(w * 0.96, 0.4, 0.7, 0.06), 0xa85b5b, 0, 0.22, 0);
+      add(rb(w * 0.96, 0.5, 0.2, 0.05), 0xc97a7a, 0, 0.65, -0.27);
+      add(rb(0.2, 0.4, 0.7, 0.05), 0x8a4848, -w * 0.42, 0.62, 0);
+      add(rb(0.2, 0.4, 0.7, 0.05), 0x8a4848, w * 0.42, 0.62, 0);
+      add(rb(0.34, 0.18, 0.34, 0.05), 0xf5d8d8, -w * 0.2, 0.51, 0.1);
+      add(rb(0.34, 0.18, 0.34, 0.05), 0xf5d8d8, w * 0.2, 0.51, 0.1);
+      add(rb(0.28, 0.14, 0.28, 0.04), 0xe8a857, 0, 0.49, 0.12);
+      add(rb(w * 0.6, 0.04, 0.3, 0.02), 0xd8a850, 0.1, 0.45, 0.18);
       break;
     }
   }
@@ -697,6 +826,8 @@ function onResize() {
   camera.bottom = -d;
   camera.updateProjectionMatrix();
   renderer.setSize(w, h, false);
+  if (composer) composer.setSize(w, h);
+  if (fxaaPass) fxaaPass.material.uniforms['resolution'].value.set(1 / (w * renderer.getPixelRatio()), 1 / (h * renderer.getPixelRatio()));
 }
 
 let saveAccum = 0;
@@ -708,7 +839,8 @@ function loop(ts) {
   lastTs = ts;
   tick(dt);
   updateHUD();
-  renderer.render(scene, camera);
+  if (composer) composer.render();
+  else renderer.render(scene, camera);
   requestAnimationFrame(loop);
 }
 
@@ -813,11 +945,11 @@ function updateDayNight() {
   ambientNight.intensity = (1 - dayFactor) * 1.2;
 
   let sky = 0x1a1428;
-  if (dayFactor > 0.7) sky = 0x6a8caa;
-  else if (dayFactor > 0.3) sky = 0x9a7568;
-  else if (dayFactor > 0.05) sky = 0x3a2d52;
+  if (dayFactor > 0.7) sky = 0x2a3550;
+  else if (dayFactor > 0.3) sky = 0x4a2f3a;
+  else if (dayFactor > 0.05) sky = 0x261c3e;
   scene.background.setHex(sky);
-  scene.fog.color.setHex(sky);
+  if (scene.fog) scene.fog.color.setHex(sky);
 
   for (const win of windowMeshes) {
     if (dayFactor > 0.5) win.material.color.setHex(0x7ec0e8);
