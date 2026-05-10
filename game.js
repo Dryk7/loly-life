@@ -4571,15 +4571,80 @@ function startGame() {
   updateQuestsBadge();
   document.getElementById('quests-fab')?.addEventListener('click', openQuests);
   document.getElementById('onboarding-buy')?.addEventListener('click', openBuildCatalog);
+  document.getElementById('tour-next')?.addEventListener('click', nextTourStep);
+  document.getElementById('tour-skip')?.addEventListener('click', closeTour);
   showWeatherBadge();
   updateOnboarding();
   requestAnimationFrame(loop);
   if (state.tutorial) {
-    setTimeout(() => toast(`👋 Bienvenue ${state.name} ! Ta maison est vide — tape 🔨 Construire pour acheter ton mobilier.`, 6000), 600);
-    setTimeout(() => toast(`💡 Achète au minimum un Lit, un Frigo, des WC et une Douche.`, 5000), 7500);
-    setTimeout(() => toast(`📱 Tape Tél. pour ouvrir ton smartphone (banque, livraison, amis)`, 5000), 13000);
-    setTimeout(() => { state.tutorial = false; saveGame(); }, 19000);
+    setTimeout(() => startTour(), 800);
+    state.tutorial = false;
+    saveGame();
   }
+}
+
+const TOUR_STEPS = [
+  { target: null, text: '👋 Bienvenue ! Voici ta nouvelle maison. Suis ce mini-tour pour te repérer.' },
+  { target: '.needs', text: '⚡ Tes besoins en haut : Faim, Énergie, Hygiène, Social, Fun. Ils descendent — gère-les !' },
+  { target: '#chip-money', text: '💰 Ton argent. Tu commences avec $3000 pour acheter tes meubles.' },
+  { target: '#onboarding', text: '📦 Ta liste de premiers achats : Lit, Frigo, Douche, WC. Tape "Ouvrir le catalogue" pour démarrer.' },
+  { target: '[data-quick="phone"]', text: '📱 Téléphone : banque, livraison, amis, trophées. À ouvrir quand tu veux.' },
+  { target: '#cam-controls', text: '🔍 Tu peux zoomer (+/−) ou recentrer (⌖). Sur mobile, pinch pour zoomer.' },
+];
+let _tourStep = 0;
+
+function startTour() {
+  _tourStep = 0;
+  document.getElementById('tour').hidden = false;
+  showTourStep();
+}
+
+function showTourStep() {
+  const step = TOUR_STEPS[_tourStep];
+  document.getElementById('tour-step').textContent = (_tourStep + 1).toString();
+  document.getElementById('tour-text').textContent = step.text;
+  const nextBtn = document.getElementById('tour-next');
+  nextBtn.textContent = (_tourStep === TOUR_STEPS.length - 1) ? 'C\'est parti !' : 'Suivant →';
+  document.querySelectorAll('.tour-highlight').forEach(el => el.remove());
+  if (step.target) {
+    const el = document.querySelector(step.target);
+    if (el) {
+      const r = el.getBoundingClientRect();
+      const hl = document.createElement('div');
+      hl.className = 'tour-highlight';
+      hl.style.left = (r.left - 6) + 'px';
+      hl.style.top = (r.top - 6) + 'px';
+      hl.style.width = (r.width + 12) + 'px';
+      hl.style.height = (r.height + 12) + 'px';
+      document.getElementById('tour').appendChild(hl);
+      const bubble = document.querySelector('.tour-bubble');
+      if (r.top < window.innerHeight / 2) {
+        bubble.style.bottom = '24%';
+        bubble.style.top = 'auto';
+      } else {
+        bubble.style.top = '14%';
+        bubble.style.bottom = 'auto';
+      }
+    }
+  } else {
+    const bubble = document.querySelector('.tour-bubble');
+    bubble.style.top = '40%';
+    bubble.style.bottom = 'auto';
+  }
+}
+
+function nextTourStep() {
+  _tourStep++;
+  if (_tourStep >= TOUR_STEPS.length) {
+    closeTour();
+    return;
+  }
+  showTourStep();
+}
+
+function closeTour() {
+  document.getElementById('tour').hidden = true;
+  document.querySelectorAll('.tour-highlight').forEach(el => el.remove());
 }
 
 function updateOnboarding() {
