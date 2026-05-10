@@ -50,19 +50,7 @@ const INNER_WALLS = [...INNER_WALLS_INTERIOR, ...INNER_WALLS_EXTERIOR];
 const DOOR_TILES = [[2,5],[7,5],[4,8],[6,8]];
 const FRONT_DOOR = [5,13];
 
-const ITEMS = [
-  { id: 'bed', type: 'bed', x: 1, y: 1, w: 2, h: 1, label: 'Lit', action: 'sleep' },
-  { id: 'wardrobe', type: 'wardrobe', x: 4, y: 1, w: 1, h: 1, label: 'Armoire', action: null },
-  { id: 'plant', type: 'plant', x: 8, y: 1, w: 1, h: 1, label: 'Plante', action: 'plant' },
-  { id: 'shower', type: 'shower', x: 1, y: 6, w: 1, h: 1, label: 'Douche', action: 'shower' },
-  { id: 'toilet', type: 'toilet', x: 3, y: 6, w: 1, h: 1, label: 'Toilettes', action: 'toilet' },
-  { id: 'computer', type: 'computer', x: 8, y: 6, w: 1, h: 1, label: 'Ordinateur', action: 'work' },
-  { id: 'fridge', type: 'fridge', x: 1, y: 9, w: 1, h: 1, label: 'Frigo', action: 'snack' },
-  { id: 'stove', type: 'stove', x: 2, y: 9, w: 1, h: 1, label: 'Cuisinière', action: 'cook' },
-  { id: 'counter', type: 'counter', x: 3, y: 9, w: 1, h: 1, label: 'Comptoir', action: null },
-  { id: 'tv', type: 'tv', x: 8, y: 9, w: 1, h: 1, label: 'Télé', action: 'tv' },
-  { id: 'sofa', type: 'sofa', x: 6, y: 12, w: 2, h: 1, label: 'Canapé', action: 'relax' },
-];
+const ITEMS = [];
 
 const ACTIONS = {
   sleep:   { label: 'Dormir', durationMin: 480, fast: true, effect: { energy: 120, hygiene: -8, hunger: -10 }, money: 0 },
@@ -84,21 +72,34 @@ const DECAY = {
 const NEED_KEYS = ['hunger', 'energy', 'hygiene', 'social', 'fun'];
 
 const BUILD_CATALOG = [
-  { id: 'lamp', name: 'Lampe', icon: '💡', price: 40, type: 'placedLamp', w: 1, h: 1 },
-  { id: 'plant_s', name: 'Plante', icon: '🪴', price: 15, type: 'placedPlant', w: 1, h: 1 },
-  { id: 'painting', name: 'Tableau', icon: '🖼', price: 20, type: 'placedPainting', w: 1, h: 1 },
-  { id: 'bookshelf', name: 'Étagère', icon: '📚', price: 60, type: 'placedBookshelf', w: 1, h: 1 },
-  { id: 'stool', name: 'Tabouret', icon: '🪑', price: 10, type: 'placedStool', w: 1, h: 1 },
-  { id: 'rug', name: 'Tapis', icon: '🟫', price: 25, type: 'placedRug', w: 2, h: 1 },
-  { id: 'cat_toy', name: 'Panier', icon: '🐈', price: 35, type: 'placedCatBed', w: 1, h: 1 },
-  { id: 'guitar', name: 'Guitare', icon: '🎸', price: 80, type: 'placedGuitar', w: 1, h: 1 },
-  { id: 'vase', name: 'Vase', icon: '🌻', price: 18, type: 'placedVase', w: 1, h: 1 },
-  { id: 'pouf', name: 'Pouf', icon: '🛋', price: 30, type: 'placedPouf', w: 1, h: 1 },
-  { id: 'candle', name: 'Bougie', icon: '🕯', price: 12, type: 'placedCandle', w: 1, h: 1 },
-  { id: 'clock', name: 'Horloge', icon: '⏰', price: 22, type: 'placedClock', w: 1, h: 1 },
-  { id: 'aquarium', name: 'Aquarium', icon: '🐠', price: 90, type: 'placedAquarium', w: 1, h: 1 },
-  { id: 'easel', name: 'Chevalet', icon: '🎨', price: 45, type: 'placedEasel', w: 1, h: 1 },
+  { id: 'bed', name: 'Lit', icon: '🛏', price: 220, type: 'bed', w: 2, h: 1, action: 'sleep', cat: 'essential' },
+  { id: 'shower', name: 'Douche', icon: '🚿', price: 180, type: 'shower', w: 1, h: 1, action: 'shower', cat: 'essential' },
+  { id: 'toilet', name: 'WC', icon: '🚽', price: 80, type: 'toilet', w: 1, h: 1, action: 'toilet', cat: 'essential' },
+  { id: 'fridge', name: 'Frigo', icon: '🧊', price: 260, type: 'fridge', w: 1, h: 1, action: 'snack', cat: 'essential' },
+  { id: 'stove', name: 'Cuisinière', icon: '🍳', price: 320, type: 'stove', w: 1, h: 1, action: 'cook', cat: 'essential' },
+  { id: 'computer', name: 'Ordinateur', icon: '💻', price: 400, type: 'computer', w: 1, h: 1, action: 'work', cat: 'essential' },
+  { id: 'tv', name: 'Télé', icon: '📺', price: 250, type: 'tv', w: 1, h: 1, action: 'tv', cat: 'essential' },
+  { id: 'sofa', name: 'Canapé', icon: '🛋', price: 200, type: 'sofa', w: 2, h: 1, action: 'relax', cat: 'essential' },
+  { id: 'wardrobe', name: 'Armoire', icon: '🪞', price: 140, type: 'wardrobe', w: 1, h: 1, action: null, cat: 'essential' },
+  { id: 'counter', name: 'Comptoir', icon: '🍽', price: 100, type: 'counter', w: 1, h: 1, action: null, cat: 'essential' },
+  { id: 'plant', name: 'Plante XL', icon: '🌿', price: 60, type: 'plant', w: 1, h: 1, action: 'plant', cat: 'essential' },
+  { id: 'lamp', name: 'Lampe', icon: '💡', price: 40, type: 'placedLamp', w: 1, h: 1, cat: 'deco' },
+  { id: 'plant_s', name: 'Plante S', icon: '🪴', price: 15, type: 'placedPlant', w: 1, h: 1, cat: 'deco' },
+  { id: 'painting', name: 'Tableau', icon: '🖼', price: 20, type: 'placedPainting', w: 1, h: 1, cat: 'deco' },
+  { id: 'bookshelf', name: 'Étagère', icon: '📚', price: 60, type: 'placedBookshelf', w: 1, h: 1, cat: 'deco' },
+  { id: 'stool', name: 'Tabouret', icon: '🪑', price: 10, type: 'placedStool', w: 1, h: 1, cat: 'deco' },
+  { id: 'rug', name: 'Tapis', icon: '🟫', price: 25, type: 'placedRug', w: 2, h: 1, cat: 'deco' },
+  { id: 'cat_toy', name: 'Panier', icon: '🐈', price: 35, type: 'placedCatBed', w: 1, h: 1, cat: 'deco' },
+  { id: 'guitar', name: 'Guitare', icon: '🎸', price: 80, type: 'placedGuitar', w: 1, h: 1, cat: 'deco' },
+  { id: 'vase', name: 'Vase', icon: '🌻', price: 18, type: 'placedVase', w: 1, h: 1, cat: 'deco' },
+  { id: 'pouf', name: 'Pouf', icon: '🪨', price: 30, type: 'placedPouf', w: 1, h: 1, cat: 'deco' },
+  { id: 'candle', name: 'Bougie', icon: '🕯', price: 12, type: 'placedCandle', w: 1, h: 1, cat: 'deco' },
+  { id: 'clock', name: 'Horloge', icon: '⏰', price: 22, type: 'placedClock', w: 1, h: 1, cat: 'deco' },
+  { id: 'aquarium', name: 'Aquarium', icon: '🐠', price: 90, type: 'placedAquarium', w: 1, h: 1, cat: 'deco' },
+  { id: 'easel', name: 'Chevalet', icon: '🎨', price: 45, type: 'placedEasel', w: 1, h: 1, cat: 'deco' },
 ];
+
+const NON_BLOCKING_TYPES = new Set(['placedPainting', 'placedRug']);
 
 const APPEARANCE_PALETTES = {
   gender: [
@@ -224,8 +225,8 @@ function defaultState(name) {
   return {
     name: name || 'Toi',
     appearance: defaultAppearance(),
-    needs: { hunger: 80, energy: 90, hygiene: 80, social: 70, fun: 70 },
-    money: 200,
+    needs: { hunger: 100, energy: 100, hygiene: 100, social: 100, fun: 100 },
+    money: 2000,
     timeMin: 8 * 60,
     day: 1,
     player: { x: 3, y: 3, sub: 0, dir: 'down', anim: 0 },
@@ -233,6 +234,7 @@ function defaultState(name) {
     action: null,
     placed: [],
     buildMode: null,
+    tutorial: true,
   };
 }
 
@@ -258,6 +260,7 @@ function saveGame() {
     day: state.day,
     player: { x: state.player.x, y: state.player.y, dir: state.player.dir },
     placed: state.placed,
+    tutorial: state.tutorial,
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(snap)); } catch {}
 }
@@ -270,6 +273,7 @@ function applyLoaded(s) {
   state.timeMin = s.timeMin ?? 8 * 60;
   state.day = s.day ?? 1;
   state.placed = Array.isArray(s.placed) ? s.placed : [];
+  state.tutorial = s.tutorial === true ? true : false;
   if (s.player) {
     if (isWalkable(s.player.x, s.player.y)) {
       state.player.x = s.player.x;
@@ -677,16 +681,18 @@ function rebuildPlacedItems() {
   }
   itemMeshes = itemMeshes.filter(o => !o.userData?.placed);
   for (const p of state.placed) {
-    const it = { id: p.id, type: p.type, x: p.x, y: p.y, w: p.w, h: p.h, label: p.name, action: null, placed: true };
+    const def = BUILD_CATALOG.find(c => c.type === p.type);
+    const it = { id: p.id, type: p.type, x: p.x, y: p.y, w: p.w, h: p.h, label: p.name, action: def?.action || null, placed: true };
     const group = new THREE.Group();
     group.position.set(it.x + it.w / 2, 0, it.y + it.h / 2);
-    buildPlacedMesh(group, it);
+    if (p.type.startsWith('placed')) buildPlacedMesh(group, it);
+    else buildItemMeshes(group, it);
     group.userData.item = it;
     group.userData.placed = true;
     group.traverse(o => { if (o.isMesh) o.userData.parentGroup = group; });
     scene.add(group);
     itemMeshes.push(group);
-    if (p.type !== 'placedPainting' && p.type !== 'placedRug') {
+    if (!NON_BLOCKING_TYPES.has(p.type)) {
       for (let dy = 0; dy < p.h; dy++) {
         for (let dx = 0; dx < p.w; dx++) {
           if (p.y + dy < ROWS && p.x + dx < COLS) grid[p.y + dy][p.x + dx] = 2;
@@ -1359,7 +1365,7 @@ function tryPlace(tx, ty) {
       const cx = tx + dx, cy = ty + dy;
       if (cx < 0 || cx >= COLS || cy < 0 || cy >= ROWS) { toast('Hors zone.'); return; }
       if (grid[cy][cx] !== 0) {
-        if (def.type !== 'placedRug' && def.type !== 'placedPainting') { toast('Case occupée.'); return; }
+        if (!NON_BLOCKING_TYPES.has(def.type)) { toast('Case occupée.'); return; }
         if (grid[cy][cx] === 1) { toast('Pas sur un mur.'); return; }
       }
     }
@@ -1647,7 +1653,10 @@ document.querySelectorAll('.action-btn').forEach(btn => {
     if (state.action) return;
     if (quick === 'call') startAction('call', null);
     if (quick === 'sleep') {
-      const bed = ITEMS.find(i => i.id === 'bed');
+      const bedData = state.placed.find(p => p.type === 'bed');
+      if (!bedData) { toast('Achète un lit dans Construire.'); return; }
+      const bed = itemMeshes.find(m => m.userData?.item?.id === bedData.id)?.userData.item;
+      if (!bed) return;
       const approach = findApproach(bed, state.player.x, state.player.y);
       if (approach) {
         state.path = approach.path;
@@ -1662,11 +1671,15 @@ function openBuildCatalog() {
   document.getElementById('modal-title').textContent = '🔨 Catalogue';
   const body = document.getElementById('modal-body');
   body.innerHTML = `
-    <div style="font-size:12px;color:var(--ink-soft);margin-bottom:10px">Tap un objet pour le placer · Argent: <strong style="color:var(--accent)">$${Math.floor(state.money)}</strong></div>
-    <button id="demolish-btn" style="width:100%;padding:10px;border-radius:10px;background:var(--bad);color:#fff;font-weight:600;font-size:13px;margin-bottom:10px">🔥 Démolir (refund 50%)</button>
-    <div class="catalog"></div>
+    <div style="font-size:12px;color:var(--ink-soft);margin-bottom:10px">Argent: <strong style="color:var(--accent)">$${Math.floor(state.money)}</strong></div>
+    <button id="demolish-btn" style="width:100%;padding:10px;border-radius:10px;background:var(--bad);color:#fff;font-weight:600;font-size:13px;margin-bottom:14px">🔥 Démolir (refund 50%)</button>
+    <div style="font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.6px;margin:6px 0 8px;font-weight:700">Essentiels</div>
+    <div class="catalog cat-essential"></div>
+    <div style="font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.6px;margin:14px 0 8px;font-weight:700">Décoration</div>
+    <div class="catalog cat-deco"></div>
   `;
-  const cat = body.querySelector('.catalog');
+  const essentialList = body.querySelector('.cat-essential');
+  const decoList = body.querySelector('.cat-deco');
   for (const it of BUILD_CATALOG) {
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -1682,7 +1695,7 @@ function openBuildCatalog() {
       bar.hidden = false;
       document.getElementById('build-name').textContent = `${it.icon} ${it.name} · $${it.price}`;
     });
-    cat.appendChild(btn);
+    (it.cat === 'essential' ? essentialList : decoList).appendChild(btn);
   }
   document.getElementById('demolish-btn').addEventListener('click', () => {
     state.buildMode = null;
@@ -1892,6 +1905,10 @@ function startGame() {
   init3D();
   updateHUD();
   requestAnimationFrame(loop);
+  if (state.tutorial) {
+    setTimeout(() => toast(`👋 Bienvenue ${state.name} ! Tape "Construire" pour acheter ton mobilier.`), 800);
+    setTimeout(() => { state.tutorial = false; saveGame(); }, 6000);
+  }
 }
 
 document.addEventListener('visibilitychange', () => { if (document.hidden) saveGame(); });
