@@ -19,7 +19,8 @@ function lamMat(color, opts = {}) {
 }
 
 const COLS = 10;
-const ROWS = 14;
+const ROWS = 18;
+const APT_ROWS = 14;
 const DAY_MIN = 1440;
 const SAVE_KEY = 'lolylife.save.v1';
 const LEGACY_SAVE_KEY = 'cozylife.save.v1';
@@ -30,16 +31,22 @@ const ZONES = [
   { name: 'bedroom', x0: 0, y0: 0, x1: 10, y1: 5, color: 0xdac9e6 },
   { name: 'bath', x0: 0, y0: 5, x1: 5, y1: 8, color: 0xbedde9 },
   { name: 'office', x0: 5, y0: 5, x1: 10, y1: 8, color: 0xe8c8b0 },
-  { name: 'kitchen', x0: 0, y0: 8, x1: 5, y1: 14, color: 0xecd9a3 },
-  { name: 'living', x0: 5, y0: 8, x1: 10, y1: 14, color: 0xcee0c5 },
+  { name: 'kitchen', x0: 0, y0: 8, x1: 5, y1: 13, color: 0xecd9a3 },
+  { name: 'living', x0: 5, y0: 8, x1: 10, y1: 13, color: 0xcee0c5 },
+  { name: 'terrace', x0: 0, y0: 13, x1: 10, y1: 18, color: 0x8c6440, outdoor: true },
 ];
 
-const INNER_WALLS = [
+const INNER_WALLS_INTERIOR = [
   [1,5],[2,5],[3,5],[4,5],[6,5],[7,5],[8,5],[9,5],
   [1,8],[2,8],[3,8],[4,8],[6,8],[7,8],[8,8],[9,8],
 ];
+const INNER_WALLS_EXTERIOR = [
+  [1,13],[2,13],[3,13],[4,13],[6,13],[7,13],[8,13],[9,13],
+];
+const INNER_WALLS = [...INNER_WALLS_INTERIOR, ...INNER_WALLS_EXTERIOR];
 
 const DOOR_TILES = [[5,5],[5,8]];
+const FRONT_DOOR = [5,13];
 
 const ITEMS = [
   { id: 'bed', type: 'bed', x: 1, y: 1, w: 2, h: 1, label: 'Lit', action: 'sleep' },
@@ -272,7 +279,7 @@ function init3D() {
   const h = stage.clientHeight || 600;
 
   const aspect = w / h;
-  const d = 9;
+  const d = 11;
   camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 0.1, 100);
   positionCamera();
 
@@ -331,7 +338,7 @@ function init3D() {
 function positionCamera() {
   const cx = COLS / 2;
   const cz = ROWS / 2;
-  camera.position.set(cx + 13, 16, cz + 13);
+  camera.position.set(cx + 14, 18, cz + 14);
   camera.lookAt(cx, 0.5, cz);
 }
 
@@ -360,12 +367,13 @@ function buildWorld() {
   const wallH = 2.2;
   const innerWallH = 1.4;
   const wallGeom = new THREE.BoxGeometry(1, wallH, 1);
-  const innerWallGeom = new THREE.BoxGeometry(1, innerWallH, 0.18);
-  const innerSet = new Set(INNER_WALLS.map(([x, y]) => `${x},${y}`));
+  const innerSet = new Set(INNER_WALLS_INTERIOR.map(([x, y]) => `${x},${y}`));
+  const exteriorSet = new Set(INNER_WALLS_EXTERIOR.map(([x, y]) => `${x},${y}`));
   for (let y = 0; y < ROWS; y++) {
     for (let x = 0; x < COLS; x++) {
       if (grid[y][x] !== 1) continue;
-      const isInner = innerSet.has(`${x},${y}`);
+      const key = `${x},${y}`;
+      const isInner = innerSet.has(key);
       if (isInner) {
         const isHorizontal = INNER_WALLS.filter(([wx, wy]) => wy === y).some(([wx]) => wx === x - 1 || wx === x + 1);
         const geom = isHorizontal ? new THREE.BoxGeometry(1, innerWallH, 0.18) : new THREE.BoxGeometry(0.18, innerWallH, 1);
@@ -378,6 +386,13 @@ function buildWorld() {
         top.position.set(x + 0.5, innerWallH + 0.025, y + 0.5);
         top.receiveShadow = true;
         scene.add(top);
+      } else if (exteriorSet.has(key)) {
+        const geom = new THREE.BoxGeometry(1, wallH, 0.4);
+        const mesh = new THREE.Mesh(geom, wallMat);
+        mesh.position.set(x + 0.5, wallH / 2, y + 0.5);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        scene.add(mesh);
       } else {
         const mesh = new THREE.Mesh(wallGeom, wallMat);
         mesh.position.set(x + 0.5, wallH / 2, y + 0.5);
@@ -389,28 +404,24 @@ function buildWorld() {
   }
 
   for (const [dx, dy] of DOOR_TILES) {
-    const isHorizontalRow = INNER_WALLS.some(([wx, wy]) => wy === dy);
     const frameMat = new THREE.MeshLambertMaterial({ color: 0x6b4a30 });
-    const frame = new THREE.Mesh(
-      isHorizontalRow ? new THREE.BoxGeometry(1, 0.12, 0.22) : new THREE.BoxGeometry(0.22, 0.12, 1),
-      frameMat
-    );
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(1, 0.12, 0.22), frameMat);
     frame.position.set(dx + 0.5, innerWallH + 0.06, dy + 0.5);
     frame.receiveShadow = true;
     scene.add(frame);
     const sideW = 0.08;
     const sideH = innerWallH;
-    if (isHorizontalRow) {
-      const side1 = new THREE.Mesh(new THREE.BoxGeometry(sideW, sideH, 0.18), frameMat);
-      side1.position.set(dx + 0.5 - 0.46, sideH / 2, dy + 0.5);
-      side1.castShadow = true;
-      scene.add(side1);
-      const side2 = new THREE.Mesh(new THREE.BoxGeometry(sideW, sideH, 0.18), frameMat);
-      side2.position.set(dx + 0.5 + 0.46, sideH / 2, dy + 0.5);
-      side2.castShadow = true;
-      scene.add(side2);
-    }
+    const side1 = new THREE.Mesh(new THREE.BoxGeometry(sideW, sideH, 0.18), frameMat);
+    side1.position.set(dx + 0.5 - 0.46, sideH / 2, dy + 0.5);
+    side1.castShadow = true;
+    scene.add(side1);
+    const side2 = new THREE.Mesh(new THREE.BoxGeometry(sideW, sideH, 0.18), frameMat);
+    side2.position.set(dx + 0.5 + 0.46, sideH / 2, dy + 0.5);
+    side2.castShadow = true;
+    scene.add(side2);
   }
+
+  buildFrontDoor();
 
   const winPositions = [{ x: 2, y: 0 }, { x: 7, y: 0 }];
   for (const w of winPositions) {
@@ -434,6 +445,111 @@ function buildWorld() {
   drawRug(2, 3, 2, 1, 0x7a6f9b);
 
   buildLamps();
+  buildTerrace();
+}
+
+function buildFrontDoor() {
+  const [dx, dy] = FRONT_DOOR;
+  const frameMat = new THREE.MeshLambertMaterial({ color: 0x4a2818 });
+  const wallH = 2.2;
+  const lintel = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.18, 0.42), frameMat);
+  lintel.position.set(dx + 0.5, wallH - 0.18, dy + 0.5);
+  lintel.castShadow = true;
+  scene.add(lintel);
+  const sideMat = new THREE.MeshLambertMaterial({ color: 0x5a3320 });
+  const sideL = new THREE.Mesh(new THREE.BoxGeometry(0.1, wallH - 0.18, 0.42), sideMat);
+  sideL.position.set(dx + 0.5 - 0.45, (wallH - 0.18) / 2, dy + 0.5);
+  sideL.castShadow = true;
+  scene.add(sideL);
+  const sideR = new THREE.Mesh(new THREE.BoxGeometry(0.1, wallH - 0.18, 0.42), sideMat);
+  sideR.position.set(dx + 0.5 + 0.45, (wallH - 0.18) / 2, dy + 0.5);
+  sideR.castShadow = true;
+  scene.add(sideR);
+  const doorMat = new THREE.MeshLambertMaterial({ color: 0x8b3a2e });
+  const door = new THREE.Mesh(new THREE.BoxGeometry(0.78, wallH - 0.3, 0.06), doorMat);
+  door.position.set(dx + 0.5 - 0.3, (wallH - 0.3) / 2, dy + 0.5 + 0.18);
+  door.rotation.y = -Math.PI / 5;
+  door.castShadow = true;
+  scene.add(door);
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.04, 10, 8), new THREE.MeshLambertMaterial({ color: 0xd4a857 }));
+  knob.position.set(dx + 0.5 + 0.05, 1.1, dy + 0.62);
+  scene.add(knob);
+}
+
+function buildTerrace() {
+  const woodMat = new THREE.MeshLambertMaterial({ color: 0x8c6440 });
+  for (let y = 13; y < ROWS - 1; y++) {
+    for (let x = 1; x < COLS - 1; x++) {
+      if (x % 2 === 0) continue;
+      const plank = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.98), new THREE.MeshLambertMaterial({ color: 0x9c7048 }));
+      plank.rotation.x = -Math.PI / 2;
+      plank.position.set(x + 0.5, 0.012, y + 0.5);
+      plank.receiveShadow = true;
+      scene.add(plank);
+    }
+  }
+
+  const railMat = new THREE.MeshLambertMaterial({ color: 0x6b4a30 });
+  for (let x = 0; x < COLS; x += 0.5) {
+    if (x < 0.3 || x > COLS - 0.3) continue;
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.5, 0.04), railMat);
+    post.position.set(x + 0.5, 0.25, ROWS - 1 - 0.05);
+    post.castShadow = true;
+    scene.add(post);
+  }
+  const topRail = new THREE.Mesh(new THREE.BoxGeometry(COLS - 1, 0.06, 0.06), railMat);
+  topRail.position.set(COLS / 2, 0.5, ROWS - 1 - 0.05);
+  topRail.castShadow = true;
+  scene.add(topRail);
+
+  for (let y = 13; y < ROWS - 1; y++) {
+    const postL = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.5, 0.04), railMat);
+    postL.position.set(0.55, 0.25, y + 0.5);
+    postL.castShadow = true;
+    scene.add(postL);
+    const postR = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.5, 0.04), railMat);
+    postR.position.set(COLS - 1 - 0.55, 0.25, y + 0.5);
+    postR.castShadow = true;
+    scene.add(postR);
+  }
+  const railL = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, ROWS - 14), railMat);
+  railL.position.set(0.55, 0.5, 13 + (ROWS - 14) / 2);
+  railL.castShadow = true;
+  scene.add(railL);
+  const railR = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, ROWS - 14), railMat);
+  railR.position.set(COLS - 1 - 0.55, 0.5, 13 + (ROWS - 14) / 2);
+  railR.castShadow = true;
+  scene.add(railR);
+
+  const potMat = new THREE.MeshLambertMaterial({ color: 0x9c5e3c });
+  const leafMat = new THREE.MeshLambertMaterial({ color: 0x4a8c5a });
+  for (const [px, pz] of [[1.5, 14.5], [8.5, 14.5], [1.5, 16.5], [8.5, 16.5]]) {
+    const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.14, 0.3, 12), potMat);
+    pot.position.set(px, 0.15, pz);
+    pot.castShadow = true;
+    scene.add(pot);
+    const foliage = new THREE.Mesh(new THREE.SphereGeometry(0.25, 12, 10), leafMat);
+    foliage.position.set(px, 0.5, pz);
+    foliage.castShadow = true;
+    scene.add(foliage);
+  }
+
+  const benchMat = new THREE.MeshLambertMaterial({ color: 0x6b4a30 });
+  const benchSeat = new THREE.Mesh(rb(2.0, 0.08, 0.45, 0.02), benchMat);
+  benchSeat.position.set(5, 0.4, 15.5);
+  benchSeat.castShadow = true;
+  benchSeat.receiveShadow = true;
+  scene.add(benchSeat);
+  const benchBack = new THREE.Mesh(rb(2.0, 0.5, 0.06, 0.02), benchMat);
+  benchBack.position.set(5, 0.65, 15.27);
+  benchBack.castShadow = true;
+  scene.add(benchBack);
+  for (const lx of [4.0, 6.0]) {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.4, 0.4), benchMat);
+    leg.position.set(lx, 0.2, 15.5);
+    leg.castShadow = true;
+    scene.add(leg);
+  }
 }
 
 function buildLamps() {
@@ -980,7 +1096,7 @@ function onResize() {
   const stage = document.getElementById('stage');
   const w = stage.clientWidth, h = stage.clientHeight;
   const aspect = w / h;
-  const d = 9;
+  const d = 11;
   camera.left = -d * aspect;
   camera.right = d * aspect;
   camera.top = d;
