@@ -595,6 +595,8 @@ let audioCtx = null;
 let skyDome = null;
 let skySun = new THREE.Vector3();
 let actionParticles = [];
+let cookFlameGroup = null;
+let showerStreamGroup = null;
 let visitorGroup = null;
 let visitorState = { x: 5, y: 14, sub: 0, dir: 'up', target: null, active: false, anim: 0 };
 
@@ -853,8 +855,15 @@ function buildDustParticles() {
 }
 
 function tickIdleAnim(dt) {
-  if (!playerGroup || state.action || (state.path && state.path.length)) return;
+  if (!playerGroup) return;
   const t = performance.now() / 1000;
+  const a = state.action;
+  if (a && a.key !== 'sleep') {
+    animateActionPose(t, a.key);
+    return;
+  }
+  if (a && a.key === 'sleep') return;
+  if (state.path && state.path.length) return;
   const breath = 1 + Math.sin(t * 1.4) * 0.015;
   if (playerHead) playerHead.scale.set(1, breath, 1);
   if (playerEyeL && playerEyeR) {
@@ -865,9 +874,73 @@ function tickIdleAnim(dt) {
   }
 }
 
+function animateActionPose(t, key) {
+  const armL = playerArmL, armR = playerArmR;
+  const legL = playerLegL, legR = playerLegR;
+  if (key === 'cook') {
+    if (armL) armL.rotation.x = -0.6 + Math.sin(t * 4) * 0.15;
+    if (armR) armR.rotation.x = -0.6 + Math.sin(t * 4 + 1) * 0.15;
+    if (playerGroup) playerGroup.rotation.z = Math.sin(t * 3) * 0.02;
+  } else if (key === 'work' || key === 'read') {
+    if (armL) armL.rotation.x = -0.95 + Math.sin(t * 2.2) * 0.08;
+    if (armR) armR.rotation.x = -0.95 + Math.sin(t * 2.2 + 0.5) * 0.08;
+    if (playerHead) playerHead.rotation.x = 0.25 + Math.sin(t * 1.5) * 0.04;
+  } else if (key === 'paint') {
+    if (armR) armR.rotation.x = -1.3 + Math.sin(t * 5) * 0.35;
+    if (armL) armL.rotation.x = -0.5;
+  } else if (key === 'yoga') {
+    if (armL) armL.rotation.x = 1.5 + Math.sin(t * 1.5) * 0.05;
+    if (armR) armR.rotation.x = 1.5 + Math.sin(t * 1.5 + 0.3) * 0.05;
+    if (playerGroup) playerGroup.position.y = 0.05 + Math.sin(t * 1.8) * 0.04;
+  } else if (key === 'workout') {
+    const phase = Math.sin(t * 5);
+    if (armL) armL.rotation.x = phase * 1.4;
+    if (armR) armR.rotation.x = -phase * 1.4;
+    if (legL) legL.rotation.x = -phase * 0.4;
+    if (legR) legR.rotation.x = phase * 0.4;
+    if (playerGroup) playerGroup.position.y = Math.abs(phase) * 0.12;
+  } else if (key === 'shower') {
+    if (armL) armL.rotation.x = 0.6 + Math.sin(t * 2.5) * 0.1;
+    if (armR) armR.rotation.x = 0.6 + Math.sin(t * 2.5 + 1) * 0.1;
+    if (playerGroup) playerGroup.rotation.z = Math.sin(t * 2) * 0.04;
+  } else if (key === 'play_guitar') {
+    if (armL) armL.rotation.x = -0.8;
+    if (armR) armR.rotation.x = -0.5 + Math.sin(t * 7) * 0.4;
+    if (playerHead) playerHead.rotation.z = Math.sin(t * 2) * 0.08;
+  } else if (key === 'tv' || key === 'relax') {
+    if (playerGroup) playerGroup.rotation.z = Math.sin(t * 0.7) * 0.025;
+    if (playerHead) playerHead.rotation.x = -0.05 + Math.sin(t * 0.5) * 0.02;
+  } else if (key === 'call') {
+    if (armR) armR.rotation.x = 1.4;
+    if (playerHead) playerHead.rotation.z = 0.15 + Math.sin(t * 1.2) * 0.04;
+  } else if (key === 'snack') {
+    const reach = Math.sin(t * 2);
+    if (armR) armR.rotation.x = -0.4 + reach * 0.4;
+  } else if (key === 'plant') {
+    if (armR) armR.rotation.x = -1.0 + Math.sin(t * 2.5) * 0.1;
+    if (playerHead) playerHead.rotation.x = 0.15;
+  } else if (key === 'toilet') {
+    if (playerGroup) playerGroup.position.y = -0.15;
+  }
+}
+
+function resetPlayerPose() {
+  if (playerArmL) playerArmL.rotation.set(0, 0, 0);
+  if (playerArmR) playerArmR.rotation.set(0, 0, 0);
+  if (playerLegL) playerLegL.rotation.set(0, 0, 0);
+  if (playerLegR) playerLegR.rotation.set(0, 0, 0);
+  if (playerHead) playerHead.rotation.set(0, 0, 0);
+  if (playerGroup) {
+    playerGroup.position.y = 0;
+    playerGroup.rotation.z = 0;
+  }
+}
+
 function tickActionParticles(dt) {
   const a = state.action;
   const t = performance.now() / 1000;
+  updateCookFlame(t);
+  updateShowerStream(t);
   if (a) {
     if (a.key === 'cook' && a.item) spawnFlameParticle(a.item, t);
     else if (a.key === 'shower' && a.item) spawnWaterParticle(a.item, t);
@@ -927,43 +1000,125 @@ function spawnSplash(x, z) {
   });
 }
 
+function buildCookFlameMesh() {
+  const grp = new THREE.Group();
+  const outer = new THREE.Mesh(
+    new THREE.ConeGeometry(0.11, 0.22, 8),
+    new THREE.MeshBasicMaterial({ color: 0xff4828, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false })
+  );
+  outer.position.y = 0.11;
+  grp.add(outer);
+  const mid = new THREE.Mesh(
+    new THREE.ConeGeometry(0.08, 0.18, 8),
+    new THREE.MeshBasicMaterial({ color: 0xff8828, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false })
+  );
+  mid.position.y = 0.09;
+  grp.add(mid);
+  const inner = new THREE.Mesh(
+    new THREE.ConeGeometry(0.045, 0.12, 8),
+    new THREE.MeshBasicMaterial({ color: 0xfff080, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false })
+  );
+  inner.position.y = 0.06;
+  grp.add(inner);
+  const halo = new THREE.Mesh(
+    new THREE.SphereGeometry(0.18, 14, 10),
+    new THREE.MeshBasicMaterial({ color: 0xff8838, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false })
+  );
+  halo.position.y = 0.05;
+  grp.add(halo);
+  grp.userData = { outer, mid, inner, halo };
+  grp.visible = false;
+  return grp;
+}
+
+function updateCookFlame(t) {
+  const a = state.action;
+  if (!cookFlameGroup) {
+    cookFlameGroup = buildCookFlameMesh();
+    scene.add(cookFlameGroup);
+  }
+  if (a && a.key === 'cook' && a.item) {
+    cookFlameGroup.visible = true;
+    cookFlameGroup.position.set(a.item.x + a.item.w / 2 - 0.2, 0.96, a.item.y + a.item.h / 2 - 0.1);
+    const u = cookFlameGroup.userData;
+    const flick1 = 1 + Math.sin(t * 12) * 0.15 + Math.sin(t * 27) * 0.08;
+    const flick2 = 1 + Math.sin(t * 9 + 1) * 0.12 + Math.sin(t * 31 + 1) * 0.06;
+    u.inner.scale.set(flick1, flick1 * 1.1, flick1);
+    u.mid.scale.set(flick2 * 0.95, flick2 * 1.15, flick2 * 0.95);
+    u.outer.scale.set(flick1 * 1.05, flick1 * 1.25, flick1 * 1.05);
+    u.halo.scale.setScalar(0.9 + Math.sin(t * 8) * 0.1);
+    u.halo.material.opacity = 0.16 + Math.sin(t * 11) * 0.04;
+  } else {
+    cookFlameGroup.visible = false;
+  }
+}
+
+function buildShowerStream() {
+  const grp = new THREE.Group();
+  const streamMat = new THREE.MeshBasicMaterial({ color: 0xa8e0ff, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false });
+  const stream = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.08, 0.7, 10, 1, true), streamMat);
+  stream.position.y = 1.25;
+  grp.add(stream);
+  const streamCore = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.04, 0.7, 8, 1, true), new THREE.MeshBasicMaterial({ color: 0xe0f6ff, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false }));
+  streamCore.position.y = 1.25;
+  grp.add(streamCore);
+  grp.userData = { stream, streamCore };
+  grp.visible = false;
+  return grp;
+}
+
+function updateShowerStream(t) {
+  const a = state.action;
+  if (!showerStreamGroup) {
+    showerStreamGroup = buildShowerStream();
+    scene.add(showerStreamGroup);
+  }
+  if (a && a.key === 'shower' && a.item) {
+    showerStreamGroup.visible = true;
+    showerStreamGroup.position.set(a.item.x + a.item.w / 2, 0, a.item.y + a.item.h / 2 - 0.1);
+    const u = showerStreamGroup.userData;
+    u.stream.material.opacity = 0.3 + Math.sin(t * 14) * 0.06;
+    u.streamCore.material.opacity = 0.55 + Math.sin(t * 18) * 0.08;
+  } else {
+    showerStreamGroup.visible = false;
+  }
+}
+
 let lastFlameSpawn = 0;
 function spawnFlameParticle(item, t) {
-  if (t - lastFlameSpawn < 0.05) return;
+  if (t - lastFlameSpawn < 0.06) return;
   lastFlameSpawn = t;
-  const cx = item.x + item.w / 2;
-  const cz = item.y + item.h / 2;
-  const colors = [0xff8838, 0xfdc848, 0xff6b35, 0xff4a1a];
-  const flameMat = new THREE.MeshBasicMaterial({
-    color: colors[Math.floor(Math.random() * colors.length)],
-    transparent: true,
-    opacity: 0.85,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-  });
-  const flame = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 4), flameMat);
-  flame.position.set(cx + (Math.random() - 0.5) * 0.1, 1.0, cz + (Math.random() - 0.5) * 0.1 - 0.1);
-  scene.add(flame);
-  actionParticles.push({
-    mesh: flame, life: 0, maxLife: 0.5,
-    vx: (Math.random() - 0.5) * 0.1,
-    vy: 0.3 + Math.random() * 0.2,
-    vz: (Math.random() - 0.5) * 0.1,
-    startOpacity: 0.85, scaleEnd: 0.4,
-  });
-  if (Math.random() < 0.3) {
-    const smokeMat = new THREE.MeshBasicMaterial({
-      color: 0x8a8a8a, transparent: true, opacity: 0.35, depthWrite: false,
+  const cx = item.x + item.w / 2 - 0.2;
+  const cz = item.y + item.h / 2 - 0.1;
+  if (Math.random() < 0.7) {
+    const emberMat = new THREE.MeshBasicMaterial({
+      color: 0xfdc848, transparent: true, opacity: 1,
+      blending: THREE.AdditiveBlending, depthWrite: false,
     });
-    const smoke = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 4), smokeMat);
-    smoke.position.set(cx + (Math.random() - 0.5) * 0.1, 1.4, cz + (Math.random() - 0.5) * 0.1 - 0.1);
+    const ember = new THREE.Mesh(new THREE.SphereGeometry(0.012, 5, 4), emberMat);
+    ember.position.set(cx + (Math.random() - 0.5) * 0.08, 1.05, cz + (Math.random() - 0.5) * 0.08);
+    scene.add(ember);
+    actionParticles.push({
+      mesh: ember, life: 0, maxLife: 0.7 + Math.random() * 0.4,
+      vx: (Math.random() - 0.5) * 0.15,
+      vy: 0.5 + Math.random() * 0.4,
+      vz: (Math.random() - 0.5) * 0.15,
+      startOpacity: 1, scaleEnd: 0.2,
+    });
+  }
+  if (Math.random() < 0.25) {
+    const smokeMat = new THREE.MeshBasicMaterial({
+      color: 0x9a9a9a, transparent: true, opacity: 0.32, depthWrite: false,
+    });
+    const smoke = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 4), smokeMat);
+    smoke.position.set(cx + (Math.random() - 0.5) * 0.08, 1.25, cz + (Math.random() - 0.5) * 0.08);
     scene.add(smoke);
     actionParticles.push({
-      mesh: smoke, life: 0, maxLife: 1.5,
-      vx: (Math.random() - 0.5) * 0.05,
-      vy: 0.3 + Math.random() * 0.1,
-      vz: (Math.random() - 0.5) * 0.05,
-      startOpacity: 0.35, scaleEnd: 2.5,
+      mesh: smoke, life: 0, maxLife: 1.8,
+      vx: (Math.random() - 0.5) * 0.04,
+      vy: 0.25 + Math.random() * 0.1,
+      vz: (Math.random() - 0.5) * 0.04,
+      startOpacity: 0.32, scaleEnd: 3.0,
     });
   }
 }
@@ -2632,10 +2787,7 @@ function finishAction() {
   playSfx(a.def.money > 0 ? 'money' : 'success');
   state.action = null;
   document.getElementById('action-panel').hidden = true;
-  if (playerGroup) {
-    playerGroup.rotation.z = 0;
-    playerGroup.position.y = 0;
-  }
+  resetPlayerPose();
   saveGame();
 }
 
@@ -2771,10 +2923,7 @@ document.getElementById('cancel-action').addEventListener('click', () => {
   if (state.action) {
     state.action = null;
     document.getElementById('action-panel').hidden = true;
-    if (playerGroup) {
-      playerGroup.rotation.z = 0;
-      playerGroup.position.y = 0;
-    }
+    resetPlayerPose();
   }
 });
 
