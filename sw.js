@@ -1,4 +1,4 @@
-const CACHE = 'lolylife-v2';
+const CACHE = 'lolylife-3d-v3';
 const FILES = [
   './',
   './index.html',
