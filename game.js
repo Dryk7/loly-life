@@ -296,6 +296,31 @@ function findApproach(it, fromX, fromY) {
   return best;
 }
 
+const SKILL_KEYS = ['cooking', 'fitness', 'charisma', 'logic', 'art', 'music'];
+const SKILL_LABELS = { cooking: 'Cuisine', fitness: 'Forme', charisma: 'Charisme', logic: 'Logique', art: 'Art', music: 'Musique' };
+const SKILL_ICONS = { cooking: '🍳', fitness: '💪', charisma: '💬', logic: '🧠', art: '🎨', music: '🎵' };
+
+const ACTION_SKILL_GAINS = {
+  cook: { cooking: 8 },
+  snack: { cooking: 2 },
+  work: { logic: 6 },
+  tv: { charisma: 2 },
+  relax: { fitness: 1 },
+  sleep: { fitness: 1 },
+  shower: { fitness: 1 },
+  call: { charisma: 4 },
+  plant: { art: 2 },
+};
+
+const CAREER_THRESHOLDS = [0, 100, 250, 500, 900, 1500, 2500];
+const CAREER_TITLES = ['Stagiaire', 'Junior', 'Confirmé', 'Senior', 'Lead', 'Manager', 'Directeur', 'CEO'];
+
+function careerLevel(xp) {
+  let lvl = 0;
+  for (const t of CAREER_THRESHOLDS) if (xp >= t) lvl++;
+  return Math.min(lvl, CAREER_TITLES.length);
+}
+
 function defaultState(name) {
   return {
     name: name || 'Toi',
@@ -310,6 +335,8 @@ function defaultState(name) {
     placed: [],
     buildMode: null,
     tutorial: true,
+    skills: { cooking: 0, fitness: 0, charisma: 0, logic: 0, art: 0, music: 0 },
+    careerXp: 0,
   };
 }
 
@@ -336,6 +363,8 @@ function saveGame() {
     player: { x: state.player.x, y: state.player.y, dir: state.player.dir },
     placed: state.placed,
     tutorial: state.tutorial,
+    skills: state.skills,
+    careerXp: state.careerXp,
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(snap)); } catch {}
 }
@@ -349,6 +378,8 @@ function applyLoaded(s) {
   state.day = s.day ?? 1;
   state.placed = Array.isArray(s.placed) ? s.placed : [];
   state.tutorial = s.tutorial === true ? true : false;
+  state.skills = { ...state.skills, ...(s.skills || {}) };
+  state.careerXp = s.careerXp || 0;
   if (s.player) {
     if (isWalkable(s.player.x, s.player.y)) {
       state.player.x = s.player.x;
@@ -1795,7 +1826,23 @@ function finishAction() {
   if (a.def.money) {
     let amount = a.def.money;
     if (amount > 0 && hasTrait('travailleur') && a.key === 'work') amount = Math.round(amount * 1.5);
+    if (a.key === 'work') amount = Math.round(amount * (1 + 0.15 * careerLevel(state.careerXp)));
     state.money = Math.max(0, state.money + amount);
+  }
+  const gains = ACTION_SKILL_GAINS[a.key];
+  if (gains) {
+    for (const [sk, val] of Object.entries(gains)) {
+      const before = Math.floor((state.skills[sk] || 0) / 100);
+      state.skills[sk] = Math.min(1000, (state.skills[sk] || 0) + val);
+      const after = Math.floor(state.skills[sk] / 100);
+      if (after > before) toast(`📈 ${SKILL_ICONS[sk]} ${SKILL_LABELS[sk]} niv. ${after} !`, 2500);
+    }
+  }
+  if (a.key === 'work') {
+    const lvlBefore = careerLevel(state.careerXp);
+    state.careerXp += 25;
+    const lvlAfter = careerLevel(state.careerXp);
+    if (lvlAfter > lvlBefore) toast(`🎉 Promotion ! ${CAREER_TITLES[lvlAfter - 1]}`, 3500);
   }
   toast(a.def.label + ' ✓');
   spawnEmote(emoteFor(a.key));
@@ -1954,17 +2001,30 @@ function openMenu() {
   document.getElementById('modal-title').textContent = 'Statut';
   const body = document.getElementById('modal-body');
   const traits = (state.appearance?.traits || []).map(id => TRAITS.find(t => t.id === id)?.label).filter(Boolean).join(' ') || 'Aucun';
+  const lvl = careerLevel(state.careerXp);
+  const careerTitle = CAREER_TITLES[Math.max(0, lvl - 1)] || CAREER_TITLES[0];
+  const nextThr = CAREER_THRESHOLDS[lvl] ?? CAREER_THRESHOLDS[CAREER_THRESHOLDS.length - 1];
+  const careerProg = nextThr ? Math.floor((state.careerXp / nextThr) * 100) : 100;
+  const skillsHtml = SKILL_KEYS.map(s => {
+    const lv = Math.floor((state.skills[s] || 0) / 100);
+    const pct = ((state.skills[s] || 0) % 100);
+    return `<div class="row"><span>${SKILL_ICONS[s]} ${SKILL_LABELS[s]}</span><strong>Niv.${lv} <span style="color:var(--ink-soft);font-size:11px;font-weight:400">(${pct}/100)</span></strong></div>`;
+  }).join('');
   body.innerHTML = `
     <div class="row"><span>Joueur</span><strong>${state.name}</strong></div>
     <div class="row"><span>Jour</span><strong>${state.day}</strong></div>
     <div class="row"><span>Heure</span><strong>${formatTime(state.timeMin)}</strong></div>
     <div class="row"><span>Argent</span><strong style="color:var(--accent)">$${Math.floor(state.money)}</strong></div>
-    <div class="row"><span>Faim</span><strong>${Math.floor(state.needs.hunger)}%</strong></div>
-    <div class="row"><span>Énergie</span><strong>${Math.floor(state.needs.energy)}%</strong></div>
-    <div class="row"><span>Hygiène</span><strong>${Math.floor(state.needs.hygiene)}%</strong></div>
-    <div class="row"><span>Social</span><strong>${Math.floor(state.needs.social)}%</strong></div>
-    <div class="row"><span>Fun</span><strong>${Math.floor(state.needs.fun)}%</strong></div>
+    <div class="row"><span>Carrière</span><strong>${careerTitle} <span style="color:var(--ink-soft);font-size:11px;font-weight:400">(${state.careerXp} XP / ${nextThr})</span></strong></div>
     <div class="row"><span>Traits</span><strong style="font-size:12px">${traits}</strong></div>
+    <div style="margin:14px 0 6px;font-size:11px;color:var(--accent);font-weight:700;letter-spacing:0.6px;text-transform:uppercase">Besoins</div>
+    <div class="row"><span>🍽 Faim</span><strong>${Math.floor(state.needs.hunger)}%</strong></div>
+    <div class="row"><span>⚡ Énergie</span><strong>${Math.floor(state.needs.energy)}%</strong></div>
+    <div class="row"><span>🚿 Hygiène</span><strong>${Math.floor(state.needs.hygiene)}%</strong></div>
+    <div class="row"><span>💬 Social</span><strong>${Math.floor(state.needs.social)}%</strong></div>
+    <div class="row"><span>🎉 Fun</span><strong>${Math.floor(state.needs.fun)}%</strong></div>
+    <div style="margin:14px 0 6px;font-size:11px;color:var(--accent);font-weight:700;letter-spacing:0.6px;text-transform:uppercase">Compétences</div>
+    ${skillsHtml}
   `;
   m.hidden = false;
 }
