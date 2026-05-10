@@ -6,7 +6,6 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { Sky } from 'three/addons/objects/Sky.js';
 
 function rb(w, h, d, r = 0.05, segs = 2) {
   return new RoundedBoxGeometry(w, h, d, segs, Math.min(r, w / 2 - 0.001, h / 2 - 0.001, d / 2 - 0.001));
@@ -80,6 +79,96 @@ function makeSkyTexture() {
   return tex;
 }
 
+function buildSkyDome() {
+  const geom = new THREE.SphereGeometry(400, 32, 16);
+  const mat = new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    depthWrite: false,
+    uniforms: {
+      topColor: { value: new THREE.Color(0x6a92c8) },
+      bottomColor: { value: new THREE.Color(0xfdb888) },
+      sunDir: { value: new THREE.Vector3(0.5, 0.5, 0.5).normalize() },
+      sunColor: { value: new THREE.Color(0xfff2c8) },
+      sunIntensity: { value: 1.0 },
+      horizonOffset: { value: 0.05 },
+    },
+    vertexShader: /* glsl */`
+      varying vec3 vWorld;
+      void main() {
+        vec4 wp = modelMatrix * vec4(position, 1.0);
+        vWorld = wp.xyz;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: /* glsl */`
+      uniform vec3 topColor;
+      uniform vec3 bottomColor;
+      uniform vec3 sunDir;
+      uniform vec3 sunColor;
+      uniform float sunIntensity;
+      uniform float horizonOffset;
+      varying vec3 vWorld;
+      void main() {
+        vec3 dir = normalize(vWorld);
+        float h = clamp(dir.y + horizonOffset, 0.0, 1.0);
+        float blend = pow(h, 0.55);
+        vec3 sky = mix(bottomColor, topColor, blend);
+        float sunDot = max(0.0, dot(dir, normalize(sunDir)));
+        float disc = smoothstep(0.998, 1.0, sunDot);
+        float halo = pow(sunDot, 18.0) * 0.55 + pow(sunDot, 90.0) * 0.45;
+        vec3 sun = sunColor * (halo + disc * 1.5) * sunIntensity;
+        gl_FragColor = vec4(sky + sun, 1.0);
+      }
+    `,
+  });
+  const mesh = new THREE.Mesh(geom, mat);
+  mesh.userData.sky = true;
+  return mesh;
+}
+
+const _skyTopDay = new THREE.Color(0x6a92c8);
+const _skyTopNight = new THREE.Color(0x14102a);
+const _skyTopDusk = new THREE.Color(0x7a4a8a);
+const _skyBotDay = new THREE.Color(0xfdc8a0);
+const _skyBotNight = new THREE.Color(0x2a1a3a);
+const _skyBotDusk = new THREE.Color(0xf28848);
+const _sunColorDay = new THREE.Color(0xfff5d8);
+const _sunColorDusk = new THREE.Color(0xff9858);
+const _sunVec = new THREE.Vector3();
+
+function updateSkyDome() {
+  if (!skyDome) return;
+  const t = state.timeMin / 60;
+  const u = skyDome.material.uniforms;
+  let dayBlend = 0;
+  if (t > 5 && t < 21) {
+    if (t < 7) dayBlend = (t - 5) / 2;
+    else if (t > 19) dayBlend = (21 - t) / 2;
+    else dayBlend = 1;
+  }
+  let duskBlend = 0;
+  if ((t >= 5 && t <= 8) || (t >= 17 && t <= 21)) {
+    duskBlend = 1 - Math.min(1, Math.abs(t - (t < 12 ? 6.5 : 19)) / 1.5);
+    duskBlend = Math.max(0, duskBlend);
+  }
+  const top = _color1.copy(_skyTopNight).lerp(_skyTopDay, dayBlend).lerp(_skyTopDusk, duskBlend * 0.6);
+  const bot = _color2.copy(_skyBotNight).lerp(_skyBotDay, dayBlend).lerp(_skyBotDusk, duskBlend * 0.7);
+  u.topColor.value.copy(top);
+  u.bottomColor.value.copy(bot);
+  u.sunIntensity.value = dayBlend * 0.9 + duskBlend * 0.5;
+  u.sunColor.value.copy(_sunColorDay).lerp(_sunColorDusk, duskBlend * 0.7);
+  let elev, az;
+  if (t < 5.5 || t > 20) { elev = -0.2; az = t < 12 ? 90 : -90; }
+  else {
+    const prog = (t - 5.5) / 14.5;
+    elev = Math.sin(prog * Math.PI) * 0.85 + 0.05;
+    az = -90 + prog * 180;
+  }
+  const azRad = THREE.MathUtils.degToRad(az);
+  _sunVec.set(Math.sin(azRad) * Math.cos(elev * Math.PI / 2), Math.sin(elev * Math.PI / 2), Math.cos(azRad) * Math.cos(elev * Math.PI / 2));
+  u.sunDir.value.copy(_sunVec.normalize());
+}
+
 function makeFloorTexture(hex, pattern) {
   const c = document.createElement('canvas');
   c.width = c.height = 96;
@@ -148,6 +237,11 @@ const ACTIONS = {
   tv:      { label: 'Regarder la télé', durationMin: 30, effect: { fun: 30, energy: 5, social: 5 } },
   relax:   { label: 'Se détendre', durationMin: 20, effect: { fun: 12, energy: 8 } },
   call:    { label: 'Appeler un ami', durationMin: 20, effect: { social: 38, fun: 5 } },
+  read:    { label: 'Lire un livre', durationMin: 30, effect: { fun: 18, energy: -3 } },
+  paint:   { label: 'Peindre', durationMin: 60, effect: { fun: 28, energy: -8 } },
+  play_guitar: { label: 'Jouer guitare', durationMin: 25, effect: { fun: 22, social: 6, energy: -5 } },
+  yoga:    { label: 'Yoga', durationMin: 25, effect: { energy: 18, fun: 10, hygiene: -2 } },
+  workout: { label: 'Faire du sport', durationMin: 30, effect: { energy: -6, fun: 12, hygiene: -8 } },
 };
 
 const DECAY = {
@@ -171,17 +265,18 @@ const BUILD_CATALOG = [
   { id: 'lamp', name: 'Lampe', icon: '💡', price: 40, type: 'placedLamp', w: 1, h: 1, cat: 'deco' },
   { id: 'plant_s', name: 'Plante S', icon: '🪴', price: 15, type: 'placedPlant', w: 1, h: 1, cat: 'deco' },
   { id: 'painting', name: 'Tableau', icon: '🖼', price: 20, type: 'placedPainting', w: 1, h: 1, cat: 'deco' },
-  { id: 'bookshelf', name: 'Étagère', icon: '📚', price: 60, type: 'placedBookshelf', w: 1, h: 1, cat: 'deco' },
+  { id: 'bookshelf', name: 'Étagère', icon: '📚', price: 60, type: 'placedBookshelf', w: 1, h: 1, action: 'read', cat: 'deco' },
   { id: 'stool', name: 'Tabouret', icon: '🪑', price: 10, type: 'placedStool', w: 1, h: 1, cat: 'deco' },
-  { id: 'rug', name: 'Tapis', icon: '🟫', price: 25, type: 'placedRug', w: 2, h: 1, cat: 'deco' },
+  { id: 'rug', name: 'Tapis', icon: '🟫', price: 25, type: 'placedRug', w: 2, h: 1, action: 'yoga', cat: 'deco' },
   { id: 'cat_toy', name: 'Panier', icon: '🐈', price: 35, type: 'placedCatBed', w: 1, h: 1, cat: 'deco' },
-  { id: 'guitar', name: 'Guitare', icon: '🎸', price: 80, type: 'placedGuitar', w: 1, h: 1, cat: 'deco' },
+  { id: 'guitar', name: 'Guitare', icon: '🎸', price: 80, type: 'placedGuitar', w: 1, h: 1, action: 'play_guitar', cat: 'deco' },
   { id: 'vase', name: 'Vase', icon: '🌻', price: 18, type: 'placedVase', w: 1, h: 1, cat: 'deco' },
   { id: 'pouf', name: 'Pouf', icon: '🪨', price: 30, type: 'placedPouf', w: 1, h: 1, cat: 'deco' },
   { id: 'candle', name: 'Bougie', icon: '🕯', price: 12, type: 'placedCandle', w: 1, h: 1, cat: 'deco' },
   { id: 'clock', name: 'Horloge', icon: '⏰', price: 22, type: 'placedClock', w: 1, h: 1, cat: 'deco' },
   { id: 'aquarium', name: 'Aquarium', icon: '🐠', price: 90, type: 'placedAquarium', w: 1, h: 1, cat: 'deco' },
-  { id: 'easel', name: 'Chevalet', icon: '🎨', price: 45, type: 'placedEasel', w: 1, h: 1, cat: 'deco' },
+  { id: 'easel', name: 'Chevalet', icon: '🎨', price: 45, type: 'placedEasel', w: 1, h: 1, action: 'paint', cat: 'deco' },
+  { id: 'pouf2', name: 'Tapis sport', icon: '🧘', price: 20, type: 'placedYogaMat', w: 2, h: 1, action: 'workout', cat: 'deco' },
 ];
 
 const NON_BLOCKING_TYPES = new Set(['placedPainting', 'placedRug']);
@@ -395,6 +490,11 @@ const ACTION_SKILL_GAINS = {
   shower: { fitness: 3 },
   call: { charisma: 12 },
   plant: { art: 8 },
+  read: { logic: 14, charisma: 4 },
+  paint: { art: 22 },
+  play_guitar: { music: 18, charisma: 4 },
+  yoga: { fitness: 14 },
+  workout: { fitness: 22 },
 };
 
 const CAREER_THRESHOLDS = [0, 75, 175, 325, 525, 800, 1200];
@@ -506,7 +606,8 @@ function init3D() {
   const stage0 = document.getElementById('stage');
   if (stage0) stage0.style.background = '#0e0a18';
 
-  // Sky shader removed — too HDR-heavy on mobile, kept fallback gradient.
+  skyDome = buildSkyDome();
+  scene.add(skyDome);
   scene.fog = null;
 
   const stage = document.getElementById('stage');
@@ -786,10 +887,44 @@ function tickActionParticles(dt) {
     p.mesh.position.y += p.vy * dt;
     p.mesh.position.z += p.vz * dt;
     if (p.gravity) p.vy -= p.gravity * dt;
+    if (p.kind === 'drop' && p.mesh.position.y <= 0.05 && !p.splashed) {
+      p.splashed = true;
+      spawnSplash(p.mesh.position.x, p.mesh.position.z);
+      p.life = p.maxLife;
+      continue;
+    }
     const k = p.life / p.maxLife;
     p.mesh.material.opacity = (1 - k) * (p.startOpacity || 0.8);
     if (p.scaleEnd != null) p.mesh.scale.setScalar(1 + k * (p.scaleEnd - 1));
   }
+}
+
+function spawnSplash(x, z) {
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + Math.random() * 0.5;
+    const splashMat = new THREE.MeshBasicMaterial({ color: 0xa8e8ff, transparent: true, opacity: 0.8, depthWrite: false });
+    const splash = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 4), splashMat);
+    splash.position.set(x, 0.05, z);
+    scene.add(splash);
+    actionParticles.push({
+      mesh: splash, life: 0, maxLife: 0.35,
+      vx: Math.cos(a) * 0.4,
+      vy: 0.6 + Math.random() * 0.2,
+      vz: Math.sin(a) * 0.4,
+      gravity: 2.0,
+      startOpacity: 0.8,
+    });
+  }
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0xa8e8ff, transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide });
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.02, 0.04, 12), ringMat);
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.set(x, 0.012, z);
+  scene.add(ring);
+  actionParticles.push({
+    mesh: ring, life: 0, maxLife: 0.4,
+    vx: 0, vy: 0, vz: 0,
+    startOpacity: 0.5, scaleEnd: 4.5,
+  });
 }
 
 let lastFlameSpawn = 0;
@@ -847,9 +982,9 @@ function spawnWaterParticle(item, t) {
   drop.scale.y = 2.5;
   scene.add(drop);
   actionParticles.push({
-    mesh: drop, life: 0, maxLife: 0.7,
-    vx: 0, vy: -0.4, vz: 0, gravity: 1.2,
-    startOpacity: 0.85,
+    mesh: drop, life: 0, maxLife: 1.5,
+    vx: 0, vy: -0.4, vz: 0, gravity: 2.0,
+    startOpacity: 0.85, kind: 'drop',
   });
 }
 
@@ -1314,6 +1449,18 @@ function buildPlacedMesh(group, it) {
       trim.rotation.x = -Math.PI / 2;
       trim.position.y = 0.017;
       trim.receiveShadow = true; group.add(trim);
+      break;
+    }
+    case 'placedYogaMat': {
+      const w = it.w * 0.85;
+      const mat = new THREE.Mesh(new THREE.PlaneGeometry(w, it.h * 0.55), lamMat(0x9b6fc8));
+      mat.rotation.x = -Math.PI / 2;
+      mat.position.y = 0.014;
+      mat.receiveShadow = true; group.add(mat);
+      const stripe = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.6, it.h * 0.05), lamMat(0xd8a8e8));
+      stripe.rotation.x = -Math.PI / 2;
+      stripe.position.y = 0.018;
+      group.add(stripe);
       break;
     }
     case 'placedCatBed': {
@@ -2361,7 +2508,7 @@ function updateFlickers() {
   }
 }
 
-function updateSky() {}
+function updateSky() { updateSkyDome(); }
 
 function updateDayNight() {
   const t = state.timeMin / 60;
@@ -2496,6 +2643,7 @@ function emoteFor(key) {
   return ({
     sleep: '💤', shower: '💧', toilet: '✨', work: '💼', plant: '🌱',
     snack: '🍎', cook: '🍳', tv: '📺', relax: '☁️', call: '💬',
+    read: '📖', paint: '🎨', play_guitar: '🎸', yoga: '🧘', workout: '💪',
   })[key] || '✨';
 }
 
