@@ -28,11 +28,11 @@ const REAL_SEC_PER_GAME_MIN = 0.5;
 const SLEEP_SPEED = 12;
 
 const ZONES = [
-  { name: 'bedroom', x0: 0, y0: 0, x1: 10, y1: 5, color: 0xdac9e6 },
-  { name: 'bath', x0: 0, y0: 5, x1: 5, y1: 8, color: 0xbedde9 },
-  { name: 'office', x0: 5, y0: 5, x1: 10, y1: 8, color: 0xe8c8b0 },
-  { name: 'kitchen', x0: 0, y0: 8, x1: 5, y1: 13, color: 0xecd9a3 },
-  { name: 'living', x0: 5, y0: 8, x1: 10, y1: 13, color: 0xcee0c5 },
+  { name: 'bedroom', x0: 0, y0: 0, x1: 10, y1: 5, color: 0xc8a8e0 },
+  { name: 'bath', x0: 0, y0: 5, x1: 5, y1: 8, color: 0x9bcae0 },
+  { name: 'office', x0: 5, y0: 5, x1: 10, y1: 8, color: 0xe8b58a },
+  { name: 'kitchen', x0: 0, y0: 8, x1: 5, y1: 13, color: 0xe8c860 },
+  { name: 'living', x0: 5, y0: 8, x1: 10, y1: 13, color: 0x9ec888 },
   { name: 'terrace', x0: 0, y0: 13, x1: 10, y1: 18, color: 0x8c6440, outdoor: true },
 ];
 
@@ -1623,12 +1623,12 @@ function spawnEmote(symbol) {
 }
 
 let toastTimer = null;
-function toast(msg) {
+function toast(msg, duration = 1800) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.hidden = false;
   if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; }, 1800);
+  toastTimer = setTimeout(() => { t.hidden = true; }, duration);
 }
 
 function formatTime(min) {
@@ -1821,7 +1821,6 @@ const continueBtn = document.getElementById('continue-btn');
 const saved = loadGame();
 if (saved && saved.name) {
   continueBtn.hidden = false;
-  nameInput.value = saved.name;
   if (saved.appearance) pendingAppearance = { ...defaultAppearance(), ...saved.appearance };
 }
 
@@ -1908,8 +1907,9 @@ function startGame() {
   updateHUD();
   requestAnimationFrame(loop);
   if (state.tutorial) {
-    setTimeout(() => toast(`👋 Bienvenue ${state.name} ! Tape "Construire" pour acheter ton mobilier.`), 800);
-    setTimeout(() => { state.tutorial = false; saveGame(); }, 6000);
+    setTimeout(() => toast(`👋 Bienvenue ${state.name} ! Ton appart est vide — tape 🔨 Construire pour acheter ton mobilier.`, 6000), 600);
+    setTimeout(() => toast(`💡 Achète au minimum un Lit, un Frigo, des WC et une Douche.`, 5000), 7500);
+    setTimeout(() => { state.tutorial = false; saveGame(); }, 13000);
   }
 }
 
