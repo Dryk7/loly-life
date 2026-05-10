@@ -959,6 +959,8 @@ function buildWorld() {
 }
 
 let neighborhoodLights = [];
+let movingCars = [];
+let pedestrians = [];
 function buildExterior() {
   const cx = COLS / 2, cz = (APT_ROWS + ROWS) / 2;
 
@@ -1178,6 +1180,89 @@ function buildExterior() {
   placeCar(cx + 8, STREET_Z + STREET_W - 1.5, 0x4a6ba8, -1);
   placeCar(cx - 14, STREET_Z + 1.5, 0xe8c860, 1);
 
+  function buildMovingCar(color, dir, lane) {
+    const grp = new THREE.Group();
+    const carMat = new THREE.MeshStandardMaterial({ color, roughness: 0.4, metalness: 0.6, envMapIntensity: 0.7 });
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.8 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x33445c, transparent: true, opacity: 0.7, roughness: 0.1 });
+    const body = new THREE.Mesh(rb(2.0, 0.55, 0.95, 0.12), carMat);
+    body.position.y = -0.18; body.castShadow = true;
+    grp.add(body);
+    const cabin = new THREE.Mesh(rb(1.0, 0.45, 0.85, 0.1), carMat);
+    cabin.position.set(-0.1 * dir, 0.3, 0); cabin.castShadow = true;
+    grp.add(cabin);
+    const ws = new THREE.Mesh(rb(0.94, 0.4, 0.8, 0.05), glassMat);
+    ws.position.set(-0.08 * dir, 0.32, 0); grp.add(ws);
+    for (const [wx, wz] of [[-0.7, -0.45], [0.7, -0.45], [-0.7, 0.45], [0.7, 0.45]]) {
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.12, 14), wheelMat);
+      wheel.rotation.z = Math.PI / 2;
+      wheel.position.set(wx, -0.42, wz);
+      grp.add(wheel);
+    }
+    const hlMat = new THREE.MeshStandardMaterial({ color: 0xffe898, emissive: 0xffe898, emissiveIntensity: 0.2 });
+    const hl1 = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 4), hlMat);
+    hl1.position.set(-dir * 1.0, -0.05, -0.3); grp.add(hl1);
+    const hl2 = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 4), hlMat);
+    hl2.position.set(-dir * 1.0, -0.05, 0.3); grp.add(hl2);
+    neighborhoodLights.push(hl1, hl2);
+    if (dir > 0) grp.rotation.y = Math.PI;
+    grp.position.set(dir > 0 ? -25 : 25, 0, lane);
+    scene.add(grp);
+    movingCars.push({ group: grp, dir, lane, speed: 1.5 + Math.random() * 1.0 });
+  }
+  buildMovingCar(0x4a8c3a, 1, STREET_Z + 1.6);
+  buildMovingCar(0xc8884a, -1, STREET_Z + STREET_W - 1.6);
+  buildMovingCar(0x9b6fc8, 1, STREET_Z + 1.6);
+
+  function buildPedestrian(skin, shirt, pants, hairColor, sx, sz, dir) {
+    const grp = new THREE.Group();
+    const skinMat = new THREE.MeshStandardMaterial({ color: skin, roughness: 0.85 });
+    const shirtMat = new THREE.MeshStandardMaterial({ color: shirt, roughness: 0.8 });
+    const pantsMat = new THREE.MeshStandardMaterial({ color: pants, roughness: 0.8 });
+    const hairMat = new THREE.MeshStandardMaterial({ color: hairColor, roughness: 0.9 });
+    const torso = new THREE.Mesh(rb(0.36, 0.5, 0.22, 0.05), shirtMat);
+    torso.position.y = 0.85; torso.castShadow = true;
+    grp.add(torso);
+    const legL = new THREE.Mesh(rb(0.13, 0.5, 0.15, 0.04), pantsMat);
+    legL.position.set(-0.08, 0.35, 0); legL.castShadow = true;
+    grp.add(legL);
+    const legR = new THREE.Mesh(rb(0.13, 0.5, 0.15, 0.04), pantsMat);
+    legR.position.set(0.08, 0.35, 0); legR.castShadow = true;
+    grp.add(legR);
+    const armL = new THREE.Mesh(rb(0.1, 0.45, 0.1, 0.04), skinMat);
+    armL.position.set(-0.23, 1.07, 0); armL.castShadow = true;
+    grp.add(armL);
+    const armR = new THREE.Mesh(rb(0.1, 0.45, 0.1, 0.04), skinMat);
+    armR.position.set(0.23, 1.07, 0); armR.castShadow = true;
+    grp.add(armR);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 10), skinMat);
+    head.position.y = 1.32; head.castShadow = true;
+    grp.add(head);
+    const hair = new THREE.Mesh(new THREE.SphereGeometry(0.195, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), hairMat);
+    hair.position.y = 1.33; grp.add(hair);
+    grp.position.set(sx, 0, sz);
+    grp.userData = { dir, legL, legR, armL, armR, anim: 0, lane: sz };
+    scene.add(grp);
+    pedestrians.push(grp);
+  }
+  const skinChoices = [0xfde0c8, 0xfbc8a8, 0xe8ad88, 0xb88660, 0x8a5e40];
+  const shirtChoices = [0x5b8aaf, 0xa85b5b, 0x7da85b, 0xc8a5d8, 0xe8a857];
+  const pantsChoices = [0x3c4a5c, 0x5c3d1e, 0x1a1a1a, 0x6b85a8];
+  const hairChoices = [0x1a1a1a, 0x5c3d1e, 0xa87544, 0xd8b878];
+  for (let i = 0; i < 4; i++) {
+    const dir = Math.random() < 0.5 ? 1 : -1;
+    const lane = Math.random() < 0.5 ? STREET_Z - 0.8 : STREET_Z + STREET_W + 0.8;
+    buildPedestrian(
+      skinChoices[Math.floor(Math.random() * skinChoices.length)],
+      shirtChoices[Math.floor(Math.random() * shirtChoices.length)],
+      pantsChoices[Math.floor(Math.random() * pantsChoices.length)],
+      hairChoices[Math.floor(Math.random() * hairChoices.length)],
+      -15 + i * 9, lane, dir
+    );
+  }
+
+  buildPark();
+
   const mailboxMat = new THREE.MeshStandardMaterial({ color: 0x2a4a78, roughness: 0.6, metalness: 0.3 });
   const mailboxFlagMat = new THREE.MeshStandardMaterial({ color: 0xe85b5b });
   const post = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.0, 6), new THREE.MeshStandardMaterial({ color: 0x4a3520 }));
@@ -1202,6 +1287,18 @@ function buildExterior() {
     { x: -8, z: -18, w: 5, h: 7, d: 5 },
     { x: 18, z: -20, w: 6, h: 9, d: 6 },
   ];
+  const moreBuildings = [
+    { x: -20, z: -8, w: 6, h: 9, d: 5 },
+    { x: -28, z: -2, w: 7, h: 11, d: 6 },
+    { x: 28, z: -8, w: 6, h: 10, d: 5 },
+    { x: 22, z: -16, w: 5, h: 7, d: 5 },
+    { x: -14, z: -28, w: 7, h: 9, d: 6 },
+    { x: 14, z: -28, w: 6, h: 8, d: 5 },
+    { x: 0, z: -32, w: 5, h: 7, d: 5 },
+    { x: -25, z: 32, w: 6, h: 9, d: 5 },
+    { x: 25, z: 32, w: 7, h: 10, d: 6 },
+  ];
+  buildingPositions.push(...moreBuildings);
   for (const b of buildingPositions) {
     const colors = [0xc8b89a, 0xa89878, 0xb88a6a, 0xd8c4a4, 0x9a7858];
     const bMat = new THREE.MeshStandardMaterial({ color: colors[Math.floor(Math.random() * colors.length)], roughness: 0.9 });
@@ -1987,6 +2084,140 @@ function checkRandomEvents() {
       toast('☕ Café offert — +Énergie', 3000);
       spawnEmote('☕');
     }
+  }
+}
+
+function buildPark() {
+  const cx = COLS / 2;
+  const PARK_Z = -10;
+
+  const parkGrass = new THREE.Mesh(new THREE.PlaneGeometry(18, 14), new THREE.MeshStandardMaterial({ color: 0x6fa55a, roughness: 0.9 }));
+  parkGrass.rotation.x = -Math.PI / 2;
+  parkGrass.position.set(cx, -0.58, PARK_Z);
+  parkGrass.receiveShadow = true;
+  scene.add(parkGrass);
+
+  const pathMat = new THREE.MeshStandardMaterial({ color: 0xa89878, roughness: 0.85 });
+  const parkPath = new THREE.Mesh(new THREE.PlaneGeometry(2, 14), pathMat);
+  parkPath.rotation.x = -Math.PI / 2;
+  parkPath.position.set(cx, -0.575, PARK_Z);
+  parkPath.receiveShadow = true;
+  scene.add(parkPath);
+
+  const fountainBaseMat = new THREE.MeshStandardMaterial({ color: 0xc0bcb0, roughness: 0.6 });
+  const fountainWaterMat = new THREE.MeshStandardMaterial({ color: 0x6cc6e0, roughness: 0.2, metalness: 0.4, emissive: 0x6cc6e0, emissiveIntensity: 0.1 });
+  const baseRim = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 0.3, 24), fountainBaseMat);
+  baseRim.position.set(cx, -0.4, PARK_Z);
+  baseRim.castShadow = true;
+  scene.add(baseRim);
+  const water = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 0.04, 24), fountainWaterMat);
+  water.position.set(cx, -0.27, PARK_Z);
+  scene.add(water);
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.25, 0.6, 12), fountainBaseMat);
+  stem.position.set(cx, 0, PARK_Z);
+  scene.add(stem);
+  const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.3, 0.18, 16), fountainBaseMat);
+  bowl.position.set(cx, 0.35, PARK_Z);
+  scene.add(bowl);
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    const drop = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 4), new THREE.MeshStandardMaterial({ color: 0x9be0ff, transparent: true, opacity: 0.7, emissive: 0x6cc6e0, emissiveIntensity: 0.3 }));
+    drop.position.set(cx + Math.cos(a) * 0.4, 0.5 + Math.sin(i) * 0.05, PARK_Z + Math.sin(a) * 0.4);
+    scene.add(drop);
+  }
+
+  const benchMat = new THREE.MeshStandardMaterial({ color: 0x4a3520, roughness: 0.85 });
+  function bench(x, z, rot = 0) {
+    const grp = new THREE.Group();
+    const seat = new THREE.Mesh(rb(2, 0.08, 0.5, 0.02), benchMat);
+    seat.position.y = 0.42; seat.castShadow = true; seat.receiveShadow = true;
+    grp.add(seat);
+    const back = new THREE.Mesh(rb(2, 0.5, 0.06, 0.02), benchMat);
+    back.position.set(0, 0.65, -0.22); back.castShadow = true;
+    grp.add(back);
+    for (const lx of [-0.85, 0.85]) {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.42, 0.4), benchMat);
+      leg.position.set(lx, 0.21, 0); leg.castShadow = true;
+      grp.add(leg);
+    }
+    grp.position.set(x, -0.5, z);
+    grp.rotation.y = rot;
+    scene.add(grp);
+  }
+  bench(cx - 4, PARK_Z - 2, Math.PI / 2);
+  bench(cx + 4, PARK_Z - 2, -Math.PI / 2);
+  bench(cx - 4, PARK_Z + 2, Math.PI / 2);
+  bench(cx + 4, PARK_Z + 2, -Math.PI / 2);
+
+  const slideMat = new THREE.MeshStandardMaterial({ color: 0xe85b5b, roughness: 0.4, metalness: 0.4 });
+  const ladderMat = new THREE.MeshStandardMaterial({ color: 0xfdc848, roughness: 0.5 });
+  const slideTop = new THREE.Mesh(rb(0.8, 0.1, 0.8, 0.05), slideMat);
+  slideTop.position.set(cx + 6, 1.0, PARK_Z + 4);
+  slideTop.castShadow = true;
+  scene.add(slideTop);
+  const slideRamp = new THREE.Mesh(rb(0.6, 0.05, 1.5, 0.04), slideMat);
+  slideRamp.position.set(cx + 6.7, 0.5, PARK_Z + 4.6);
+  slideRamp.rotation.x = -0.5;
+  slideRamp.castShadow = true;
+  scene.add(slideRamp);
+  for (let i = 0; i < 4; i++) {
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.6, 6), ladderMat);
+    post.position.set(cx + 5.7 + (i % 2) * 0.6, 0.2, PARK_Z + 3.7 + (i < 2 ? 0 : 0.6));
+    post.castShadow = true;
+    scene.add(post);
+  }
+
+  const flowerMats = [0xe85b8a, 0xfdc848, 0xc88adc, 0xe85b5b, 0x6cc6e0].map(c => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.1 }));
+  for (let i = 0; i < 30; i++) {
+    const angle = (i / 30) * Math.PI * 2;
+    const r = 1.8 + Math.random() * 0.4;
+    const fx = cx + Math.cos(angle) * r;
+    const fz = PARK_Z + Math.sin(angle) * r;
+    const stemM = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.2, 4), new THREE.MeshStandardMaterial({ color: 0x4a8c3a }));
+    stemM.position.set(fx, -0.45, fz);
+    scene.add(stemM);
+    const flower = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), flowerMats[Math.floor(Math.random() * flowerMats.length)]);
+    flower.position.set(fx, -0.3, fz);
+    scene.add(flower);
+  }
+
+  for (let i = 0; i < 4; i++) {
+    const tx = cx - 7 + (i % 2) * 14;
+    const tz = PARK_Z - 5 + Math.floor(i / 2) * 10;
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6b4a30, roughness: 0.85 });
+    const folMat = new THREE.MeshStandardMaterial({ color: 0x4a8c3a, roughness: 0.85 });
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 1.5, 8), trunkMat);
+    trunk.position.set(tx, 0.15, tz);
+    trunk.castShadow = true;
+    scene.add(trunk);
+    const fol = new THREE.Mesh(new THREE.SphereGeometry(0.95, 12, 10), folMat);
+    fol.position.set(tx, 1.3, tz);
+    fol.castShadow = true;
+    scene.add(fol);
+  }
+}
+
+function tickMovingCars(dt) {
+  for (const c of movingCars) {
+    c.group.position.x += c.dir * c.speed * dt;
+    if (c.dir > 0 && c.group.position.x > 28) c.group.position.x = -28;
+    else if (c.dir < 0 && c.group.position.x < -28) c.group.position.x = 28;
+  }
+}
+
+function tickPedestrians(dt) {
+  for (const p of pedestrians) {
+    const data = p.userData;
+    p.position.x += data.dir * 0.7 * dt;
+    if (data.dir > 0 && p.position.x > 22) p.position.x = -22;
+    else if (data.dir < 0 && p.position.x < -22) p.position.x = 22;
+    p.rotation.y = data.dir > 0 ? -Math.PI / 2 : Math.PI / 2;
+    data.anim += dt * 7;
+    const swing = Math.sin(data.anim) * 0.5;
+    if (data.legL) data.legL.rotation.x = swing;
+    if (data.legR) data.legR.rotation.x = -swing;
+    if (data.armL) data.armL.rotation.x = -swing * 0.7;
+    if (data.armR) data.armR.rotation.x = swing * 0.7;
   }
 }
 
@@ -3363,6 +3594,8 @@ function tick(dt) {
   checkRandomEvents();
   ensureWeatherParticles();
   tickWeatherParticles(dt);
+  tickMovingCars(dt);
+  tickPedestrians(dt);
   checkAchievements();
 
   saveAccum += dt;
