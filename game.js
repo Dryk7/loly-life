@@ -400,6 +400,9 @@ let composer, bloomPass, fxaaPass;
 let floorMesh;
 let blinkTimer = 0;
 const flickerMeshes = [];
+let catGroup = null;
+let catState = { x: 7, y: 10, sub: 0, dir: 'down', target: null, idle: 0, anim: 0 };
+let audioCtx = null;
 
 const canvasEl = document.getElementById('canvas');
 
@@ -467,6 +470,7 @@ function init3D() {
   buildWorld();
   buildItems();
   buildPlayer();
+  buildCat();
 
   canvasEl.addEventListener('pointerdown', onPointerDown);
   window.addEventListener('resize', onResize);
@@ -1164,6 +1168,159 @@ function buildItemMeshes(group, it) {
   }
 }
 
+function buildCat() {
+  catGroup = new THREE.Group();
+  const furMat = new THREE.MeshLambertMaterial({ color: 0xc8a070 });
+  const stripeMat = new THREE.MeshLambertMaterial({ color: 0x8a6040 });
+  const noseMat = new THREE.MeshLambertMaterial({ color: 0xe89a8a });
+
+  const body = new THREE.Mesh(rb(0.34, 0.2, 0.5, 0.07), furMat);
+  body.position.y = 0.18; body.castShadow = true; body.receiveShadow = true;
+  catGroup.add(body);
+
+  for (let i = 0; i < 3; i++) {
+    const stripe = new THREE.Mesh(rb(0.36, 0.04, 0.06, 0.02), stripeMat);
+    stripe.position.set(0, 0.27, -0.1 + i * 0.1);
+    catGroup.add(stripe);
+  }
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 14, 12), furMat);
+  head.position.set(0, 0.3, -0.24); head.castShadow = true;
+  catGroup.add(head);
+
+  const earL = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.1, 6), furMat);
+  earL.position.set(-0.07, 0.42, -0.24); catGroup.add(earL);
+  const earR = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.1, 6), furMat);
+  earR.position.set(0.07, 0.42, -0.24); catGroup.add(earR);
+
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x4aa848 });
+  const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 6), eyeMat);
+  eyeL.position.set(-0.05, 0.32, -0.36); catGroup.add(eyeL);
+  const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 6), eyeMat);
+  eyeR.position.set(0.05, 0.32, -0.36); catGroup.add(eyeR);
+
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.014, 8, 6), noseMat);
+  nose.position.set(0, 0.28, -0.38); catGroup.add(nose);
+
+  const legGeom = new THREE.CylinderGeometry(0.028, 0.028, 0.18, 8);
+  for (const [px, pz] of [[-0.09, -0.18], [0.09, -0.18], [-0.09, 0.18], [0.09, 0.18]]) {
+    const leg = new THREE.Mesh(legGeom, furMat);
+    leg.position.set(px, 0.09, pz);
+    leg.castShadow = true;
+    catGroup.add(leg);
+  }
+
+  const tailGeom = new THREE.CylinderGeometry(0.018, 0.028, 0.45, 8);
+  tailGeom.translate(0, 0.225, 0);
+  const tail = new THREE.Mesh(tailGeom, furMat);
+  tail.position.set(0, 0.18, 0.28); tail.rotation.x = -Math.PI / 5;
+  tail.castShadow = true;
+  catGroup.add(tail);
+  catGroup.userData.tail = tail;
+
+  catGroup.position.set(catState.x + 0.5, 0, catState.y + 0.5);
+  catGroup.userData.cat = true;
+  catGroup.scale.setScalar(1.1);
+  scene.add(catGroup);
+}
+
+function tickCat(dt) {
+  if (!catGroup) return;
+  catState.idle += dt;
+  if (catGroup.userData.tail) catGroup.userData.tail.rotation.z = Math.sin(performance.now() / 600) * 0.3;
+  if (catState.idle > 4 && (!catState.target || catState.target.length === 0)) {
+    for (let attempts = 0; attempts < 8; attempts++) {
+      const tx = Math.floor(Math.random() * COLS);
+      const ty = Math.floor(Math.random() * APT_ROWS);
+      if (!isWalkable(tx, ty)) continue;
+      if (tx === catState.x && ty === catState.y) continue;
+      const path = bfs(catState.x, catState.y, tx, ty);
+      if (path && path.length) { catState.target = path; catState.idle = 0; break; }
+    }
+  }
+  if (catState.target && catState.target.length) {
+    const speed = 2.5;
+    catState.sub += dt * speed;
+    catState.anim += dt * 9;
+    const [nx, ny] = catState.target[0];
+    const dx = nx - catState.x, dy = ny - catState.y;
+    catGroup.position.x = catState.x + 0.5 + dx * catState.sub;
+    catGroup.position.z = catState.y + 0.5 + dy * catState.sub;
+    if (Math.abs(dx) > Math.abs(dy)) catState.dir = dx > 0 ? 'right' : 'left';
+    else catState.dir = dy > 0 ? 'down' : 'up';
+    const angles = { down: 0, up: Math.PI, left: Math.PI / 2, right: -Math.PI / 2 };
+    catGroup.rotation.y = angles[catState.dir] || 0;
+    if (catState.sub >= 1) {
+      catState.sub = 0;
+      const [nx2, ny2] = catState.target.shift();
+      catState.x = nx2; catState.y = ny2;
+      if (catState.target.length === 0) catState.target = null;
+    }
+  }
+}
+
+function petCat() {
+  state.needs.fun = Math.min(100, state.needs.fun + 5);
+  state.needs.social = Math.min(100, state.needs.social + 3);
+  spawnEmote('💖');
+  toast('Tu caresses le chat', 1500);
+  playSfx('pet');
+}
+
+function ensureAudio() {
+  if (audioCtx) return audioCtx;
+  try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch {}
+  return audioCtx;
+}
+
+function playSfx(type) {
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  if (type === 'tap') {
+    o.type = 'sine'; o.frequency.value = 600;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.05, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    o.start(t); o.stop(t + 0.13);
+  } else if (type === 'success') {
+    o.type = 'triangle'; o.frequency.setValueAtTime(660, t);
+    o.frequency.exponentialRampToValueAtTime(990, t + 0.18);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.08, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+    o.start(t); o.stop(t + 0.31);
+  } else if (type === 'pet') {
+    o.type = 'sine'; o.frequency.setValueAtTime(880, t);
+    o.frequency.exponentialRampToValueAtTime(440, t + 0.25);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.05, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+    o.start(t); o.stop(t + 0.31);
+  } else if (type === 'levelup') {
+    o.type = 'square'; o.frequency.setValueAtTime(523, t);
+    o.frequency.setValueAtTime(659, t + 0.08);
+    o.frequency.setValueAtTime(784, t + 0.16);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.05, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+    o.start(t); o.stop(t + 0.41);
+  } else if (type === 'money') {
+    const o2 = ctx.createOscillator();
+    o2.connect(g);
+    o.type = 'sine'; o.frequency.value = 1320;
+    o2.type = 'sine'; o2.frequency.value = 1760;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.04, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+    o.start(t); o.stop(t + 0.21);
+    o2.start(t + 0.05); o2.stop(t + 0.25);
+  }
+}
+
 function buildPlayer() {
   if (playerGroup) {
     scene.remove(playerGroup);
@@ -1509,6 +1666,11 @@ function onPointerDown(e) {
   pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
   raycaster.setFromCamera(pointer, camera);
 
+  if (catGroup) {
+    const catHits = raycaster.intersectObject(catGroup, true);
+    if (catHits.length > 0) { petCat(); return; }
+  }
+
   if (state.demolishMode) {
     const placedMeshes = itemMeshes.filter(m => m.userData?.placed);
     const hits = raycaster.intersectObjects(placedMeshes, true);
@@ -1718,6 +1880,7 @@ function tick(dt) {
 
   updateDayNight();
   updateFlickers();
+  tickCat(dt);
 
   saveAccum += dt;
   if (saveAccum > 8) { saveAccum = 0; saveGame(); }
@@ -1835,17 +1998,18 @@ function finishAction() {
       const before = Math.floor((state.skills[sk] || 0) / 100);
       state.skills[sk] = Math.min(1000, (state.skills[sk] || 0) + val);
       const after = Math.floor(state.skills[sk] / 100);
-      if (after > before) toast(`📈 ${SKILL_ICONS[sk]} ${SKILL_LABELS[sk]} niv. ${after} !`, 2500);
+      if (after > before) { toast(`📈 ${SKILL_ICONS[sk]} ${SKILL_LABELS[sk]} niv. ${after} !`, 2500); playSfx('levelup'); }
     }
   }
   if (a.key === 'work') {
     const lvlBefore = careerLevel(state.careerXp);
     state.careerXp += 25;
     const lvlAfter = careerLevel(state.careerXp);
-    if (lvlAfter > lvlBefore) toast(`🎉 Promotion ! ${CAREER_TITLES[lvlAfter - 1]}`, 3500);
+    if (lvlAfter > lvlBefore) { toast(`🎉 Promotion ! ${CAREER_TITLES[lvlAfter - 1]}`, 3500); playSfx('levelup'); }
   }
   toast(a.def.label + ' ✓');
   spawnEmote(emoteFor(a.key));
+  playSfx(a.def.money > 0 ? 'money' : 'success');
   state.action = null;
   document.getElementById('action-panel').hidden = true;
   if (playerGroup) {
