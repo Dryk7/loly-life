@@ -6,6 +6,8 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { SAOPass } from 'three/addons/postprocessing/SAOPass.js';
+import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
 
 function rb(w, h, d, r = 0.05, segs = 2) {
   return new RoundedBoxGeometry(w, h, d, segs, Math.min(r, w / 2 - 0.001, h / 2 - 0.001, d / 2 - 0.001));
@@ -678,7 +680,7 @@ let itemMeshes = [];
 let windowMeshes = [];
 let lampLights = [];
 let particleSystems = [];
-let composer, bloomPass, fxaaPass;
+let composer, bloomPass, fxaaPass, outlinePass;
 let floorMesh;
 let blinkTimer = 0;
 const flickerMeshes = [];
@@ -740,6 +742,27 @@ function init3D() {
   composer = new EffectComposer(renderer);
   composer.setSize(w, h);
   composer.addPass(new RenderPass(scene, camera));
+
+  const saoPass = new SAOPass(scene, camera);
+  saoPass.params.saoIntensity = 0.018;
+  saoPass.params.saoBias = 0.5;
+  saoPass.params.saoScale = 1;
+  saoPass.params.saoKernelRadius = 30;
+  saoPass.params.saoMinResolution = 0;
+  saoPass.params.saoBlur = true;
+  saoPass.params.saoBlurRadius = 6;
+  saoPass.params.saoBlurStdDev = 4;
+  saoPass.params.saoBlurDepthCutoff = 0.01;
+  composer.addPass(saoPass);
+
+  outlinePass = new OutlinePass(new THREE.Vector2(w, h), scene, camera);
+  outlinePass.edgeStrength = 2.5;
+  outlinePass.edgeGlow = 0.0;
+  outlinePass.edgeThickness = 1.0;
+  outlinePass.visibleEdgeColor.set(0x1a1428);
+  outlinePass.hiddenEdgeColor.set(0x000000);
+  composer.addPass(outlinePass);
+
   bloomPass = new UnrealBloomPass(new THREE.Vector2(w, h), 0.4, 0.4, 0.88);
   composer.addPass(bloomPass);
 
@@ -998,6 +1021,7 @@ function buildExterior() {
       for (let i = 0; i < Math.floor(w); i++) {
         const pick = new THREE.Mesh(rb(0.08, 0.6, 0.04, 0.01), fenceMat);
         pick.position.set(x + 0.5 + i, 0.0, z);
+        pick.castShadow = false;
         scene.add(pick);
       }
     }
@@ -1034,11 +1058,9 @@ function buildExterior() {
       scene.add(fol1);
       const fol2 = new THREE.Mesh(new THREE.SphereGeometry(0.6 * scale, 12, 10), fol);
       fol2.position.set(x + 0.3 * scale, 1.5 * scale - 0.6, z + 0.2 * scale);
-      fol2.castShadow = true;
       scene.add(fol2);
       const fol3 = new THREE.Mesh(new THREE.SphereGeometry(0.55 * scale, 12, 10), fol);
       fol3.position.set(x - 0.25 * scale, 1.4 * scale - 0.6, z - 0.2 * scale);
-      fol3.castShadow = true;
       scene.add(fol3);
     }
   }
@@ -1059,7 +1081,6 @@ function buildExterior() {
     scene.add(bush);
     const bush2 = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 10), bushMat);
     bush2.position.set(bx + 0.3, -0.2, bz - 0.2);
-    bush2.castShadow = true;
     scene.add(bush2);
   }
 
@@ -2163,6 +2184,7 @@ let bicycles = [];
 function buildBicycles() {
   const cx = COLS / 2;
   const STREET_Z = 22;
+  const STREET_W = 8;
   for (let i = 0; i < 2; i++) {
     const grp = new THREE.Group();
     const frameMat = new THREE.MeshStandardMaterial({ color: i === 0 ? 0x4ac0e8 : 0xe85b5b, roughness: 0.5, metalness: 0.7 });
@@ -2252,6 +2274,8 @@ function ensureUmbrellas() {
     for (const u of umbrellas) u.group.visible = false;
   }
 }
+
+function buildPark() {
   const cx = COLS / 2;
   const PARK_Z = -10;
 
@@ -3501,6 +3525,7 @@ function buildPlayer() {
   playerGroup.position.set(state.player.x + 0.5, 0, state.player.y + 0.5);
   playerGroup.rotation.y = Math.PI;
   scene.add(playerGroup);
+  if (outlinePass) outlinePass.selectedObjects = [playerGroup];
 }
 
 function updatePlayerFacing(dir) {
