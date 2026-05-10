@@ -955,6 +955,179 @@ function buildWorld() {
   buildTerrace();
   buildSunBeams();
   buildDustParticles();
+  buildExterior();
+}
+
+let neighborhoodLights = [];
+function buildExterior() {
+  const cx = COLS / 2, cz = (APT_ROWS + ROWS) / 2;
+
+  const grassGeom = new THREE.PlaneGeometry(120, 120, 1, 1);
+  const grassMat = new THREE.MeshStandardMaterial({
+    color: 0x6fa55a, roughness: 0.9, metalness: 0.0, envMapIntensity: 0.2,
+  });
+  const grass = new THREE.Mesh(grassGeom, grassMat);
+  grass.rotation.x = -Math.PI / 2;
+  grass.position.set(cx, -0.62, cz);
+  grass.receiveShadow = true;
+  scene.add(grass);
+
+  const pathMat = new THREE.MeshStandardMaterial({ color: 0xa89878, roughness: 0.85 });
+  const path = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 8), pathMat);
+  path.rotation.x = -Math.PI / 2;
+  path.position.set(5, -0.6, ROWS + 3);
+  path.receiveShadow = true;
+  scene.add(path);
+
+  const fenceMat = new THREE.MeshStandardMaterial({ color: 0xc8a878, roughness: 0.8 });
+  const fenceDarkMat = new THREE.MeshStandardMaterial({ color: 0x8a6a48, roughness: 0.8 });
+  function fenceSeg(x, z, w, h) {
+    const post = new THREE.Mesh(rb(0.1, 0.7, 0.1, 0.02), fenceDarkMat);
+    post.position.set(x, 0.0, z);
+    post.castShadow = true;
+    scene.add(post);
+    if (w) {
+      const rail = new THREE.Mesh(rb(w, 0.08, 0.05, 0.01), fenceMat);
+      rail.position.set(x + w / 2, 0.05, z);
+      scene.add(rail);
+      const rail2 = new THREE.Mesh(rb(w, 0.08, 0.05, 0.01), fenceMat);
+      rail2.position.set(x + w / 2, 0.4, z);
+      scene.add(rail2);
+      for (let i = 0; i < Math.floor(w); i++) {
+        const pick = new THREE.Mesh(rb(0.08, 0.6, 0.04, 0.01), fenceMat);
+        pick.position.set(x + 0.5 + i, 0.0, z);
+        scene.add(pick);
+      }
+    }
+  }
+  for (let i = -1; i <= COLS; i += 2) fenceSeg(i, ROWS + 6, 2, 0.7);
+  for (let i = ROWS; i <= ROWS + 6; i += 2) {
+    fenceSeg(-1, i, 0, 0.7);
+    fenceSeg(COLS, i, 0, 0.7);
+  }
+
+  const treeTrunkMat = new THREE.MeshStandardMaterial({ color: 0x6b4a30, roughness: 0.85 });
+  const treeFoliageMats = [
+    new THREE.MeshStandardMaterial({ color: 0x4a8c3a, roughness: 0.85 }),
+    new THREE.MeshStandardMaterial({ color: 0x5fa84a, roughness: 0.85 }),
+    new THREE.MeshStandardMaterial({ color: 0x3a7a4a, roughness: 0.85 }),
+  ];
+  function tree(x, z, scale = 1, type = 'oak') {
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18 * scale, 0.22 * scale, 1.4 * scale, 8), treeTrunkMat);
+    trunk.position.set(x, 0.7 * scale - 0.6, z);
+    trunk.castShadow = true;
+    scene.add(trunk);
+    const fol = treeFoliageMats[Math.floor(Math.random() * treeFoliageMats.length)];
+    if (type === 'fir') {
+      for (let i = 0; i < 3; i++) {
+        const cone = new THREE.Mesh(new THREE.ConeGeometry((0.9 - i * 0.15) * scale, 0.9 * scale, 8), fol);
+        cone.position.set(x, (1.5 + i * 0.6) * scale - 0.6, z);
+        cone.castShadow = true;
+        scene.add(cone);
+      }
+    } else {
+      const fol1 = new THREE.Mesh(new THREE.SphereGeometry(0.85 * scale, 12, 10), fol);
+      fol1.position.set(x, 1.7 * scale - 0.6, z);
+      fol1.castShadow = true;
+      scene.add(fol1);
+      const fol2 = new THREE.Mesh(new THREE.SphereGeometry(0.6 * scale, 12, 10), fol);
+      fol2.position.set(x + 0.3 * scale, 1.5 * scale - 0.6, z + 0.2 * scale);
+      fol2.castShadow = true;
+      scene.add(fol2);
+      const fol3 = new THREE.Mesh(new THREE.SphereGeometry(0.55 * scale, 12, 10), fol);
+      fol3.position.set(x - 0.25 * scale, 1.4 * scale - 0.6, z - 0.2 * scale);
+      fol3.castShadow = true;
+      scene.add(fol3);
+    }
+  }
+  tree(-3, 2, 1.2, 'oak');
+  tree(-2.5, 8, 1.0, 'fir');
+  tree(-3.5, 14, 1.1, 'oak');
+  tree(13, 1, 1.1, 'fir');
+  tree(13.5, 7, 1.3, 'oak');
+  tree(12.5, 13, 1.0, 'oak');
+  tree(2, ROWS + 4, 0.85, 'oak');
+  tree(8, ROWS + 4, 0.95, 'fir');
+
+  const bushMat = new THREE.MeshStandardMaterial({ color: 0x4a7c3a, roughness: 0.9 });
+  for (const [bx, bz] of [[-1.5, -1], [11.5, -1], [-1.5, ROWS + 0.5], [11.5, ROWS + 0.5], [3, ROWS + 5], [7, ROWS + 5]]) {
+    const bush = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 10), bushMat);
+    bush.position.set(bx, -0.1, bz);
+    bush.castShadow = true; bush.receiveShadow = true;
+    scene.add(bush);
+    const bush2 = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 10), bushMat);
+    bush2.position.set(bx + 0.3, -0.2, bz - 0.2);
+    bush2.castShadow = true;
+    scene.add(bush2);
+  }
+
+  const flowerMats = [0xe85b8a, 0xfdc848, 0xc88adc, 0xe85b5b].map(c => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.1 }));
+  for (let i = 0; i < 30; i++) {
+    const fx = Math.random() * 18 - 4;
+    const fz = Math.random() * 22 + ROWS - 4;
+    if (fx > -1 && fx < COLS + 1 && fz < ROWS + 1) continue;
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.18, 4), bushMat);
+    stem.position.set(fx, -0.5, fz);
+    scene.add(stem);
+    const flower = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), flowerMats[Math.floor(Math.random() * flowerMats.length)]);
+    flower.position.set(fx, -0.36, fz);
+    scene.add(flower);
+  }
+
+  const buildingPositions = [
+    { x: -22, z: 4, w: 6, h: 8, d: 6 },
+    { x: -28, z: 16, w: 7, h: 11, d: 6 },
+    { x: -20, z: 25, w: 6, h: 7, d: 5 },
+    { x: 26, z: 5, w: 7, h: 9, d: 6 },
+    { x: 30, z: 14, w: 6, h: 12, d: 6 },
+    { x: 24, z: 24, w: 7, h: 8, d: 5 },
+    { x: 5, z: -22, w: 8, h: 10, d: 6 },
+    { x: -8, z: -18, w: 5, h: 7, d: 5 },
+    { x: 18, z: -20, w: 6, h: 9, d: 6 },
+  ];
+  for (const b of buildingPositions) {
+    const colors = [0xc8b89a, 0xa89878, 0xb88a6a, 0xd8c4a4, 0x9a7858];
+    const bMat = new THREE.MeshStandardMaterial({ color: colors[Math.floor(Math.random() * colors.length)], roughness: 0.9 });
+    const body = new THREE.Mesh(rb(b.w, b.h, b.d, 0.1), bMat);
+    body.position.set(b.x, b.h / 2 - 0.6, b.z);
+    body.castShadow = true; body.receiveShadow = true;
+    scene.add(body);
+    const roofMat = new THREE.MeshStandardMaterial({ color: 0x4a3a2a, roughness: 0.85 });
+    const roof = new THREE.Mesh(rb(b.w + 0.2, 0.2, b.d + 0.2, 0.04), roofMat);
+    roof.position.set(b.x, b.h - 0.5, b.z);
+    scene.add(roof);
+    const cols = Math.floor(b.w / 1.4), rows = Math.floor(b.h / 1.4);
+    for (let cc = 0; cc < cols; cc++) {
+      for (let rr = 0; rr < rows; rr++) {
+        const lit = Math.random() > 0.45;
+        const winMat = new THREE.MeshStandardMaterial({
+          color: lit ? 0xfdd585 : 0x4a5a6a,
+          emissive: lit ? 0xfdd585 : 0x000000,
+          emissiveIntensity: lit ? 0.6 : 0,
+          roughness: 0.4,
+        });
+        const win = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.6), winMat);
+        const xs = (cc + 0.5) / cols * (b.w - 0.6) - (b.w - 0.6) / 2;
+        const ys = (rr + 0.5) / rows * (b.h - 1) - (b.h - 1) / 2 + 0.5;
+        for (const side of [-1, 1]) {
+          const w2 = win.clone();
+          w2.material = winMat;
+          w2.position.set(b.x + xs * (side === 1 ? 1 : -1), b.h / 2 + ys - 0.6, b.z + side * (b.d / 2 + 0.01));
+          if (side === -1) w2.rotation.y = Math.PI;
+          scene.add(w2);
+          if (lit) neighborhoodLights.push(w2);
+        }
+        for (const side of [-1, 1]) {
+          const w3 = win.clone();
+          w3.material = winMat;
+          w3.position.set(b.x + side * (b.w / 2 + 0.01), b.h / 2 + ys - 0.6, b.z + xs * (side === 1 ? 1 : -1));
+          w3.rotation.y = side === 1 ? -Math.PI / 2 : Math.PI / 2;
+          scene.add(w3);
+          if (lit) neighborhoodLights.push(w3);
+        }
+      }
+    }
+  }
 }
 
 let sunBeams = [];
@@ -3155,6 +3328,10 @@ function updateDayNight() {
   }
   if (dustParticles) {
     dustParticles.material.opacity = 0.15 + dayFactor * 0.35;
+  }
+  const nightFactor = 1 - dayFactor;
+  for (const win of neighborhoodLights) {
+    if (win.material) win.material.emissiveIntensity = nightFactor * 0.9;
   }
 }
 
