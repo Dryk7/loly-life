@@ -587,6 +587,7 @@ function defaultState(name) {
     appearance: defaultAppearance(),
     needs: { hunger: 75, energy: 80, hygiene: 80, social: 70, fun: 70 },
     money: 3000,
+    difficulty: 'normal',
     timeMin: 8 * 60,
     day: 1,
     player: { x: 3, y: 3, sub: 0, dir: 'down', anim: 0 },
@@ -610,6 +611,7 @@ function defaultState(name) {
 
 let state = defaultState();
 let pendingAppearance = defaultAppearance();
+let pendingDifficulty = 'normal';
 
 function loadGame() {
   try {
@@ -641,6 +643,7 @@ function saveGame() {
     bank: state.bank,
     stats: state.stats,
     friends: state.friends,
+    difficulty: state.difficulty,
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(snap)); } catch {}
 }
@@ -664,6 +667,7 @@ function applyLoaded(s) {
   state.bank = s.bank || 0;
   state.stats = { ...state.stats, ...(s.stats || {}) };
   state.friends = Array.isArray(s.friends) ? s.friends : [];
+  state.difficulty = s.difficulty || 'normal';
   if (s.player) {
     if (isWalkable(s.player.x, s.player.y)) {
       state.player.x = s.player.x;
@@ -3635,6 +3639,35 @@ function updatePlayerFacing(dir) {
   playerGroup.rotation.y = cur + delta * 0.25;
 }
 
+let tapMarker = null;
+function spawnTapMarker(x, z, color) {
+  if (!tapMarker) {
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x4ac0e8, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide });
+    tapMarker = new THREE.Mesh(new THREE.RingGeometry(0.12, 0.18, 24), ringMat);
+    tapMarker.rotation.x = -Math.PI / 2;
+    scene.add(tapMarker);
+  }
+  tapMarker.material.color.setHex(color);
+  tapMarker.position.set(x + 0.5, 0.04, z + 0.5);
+  tapMarker.scale.set(1, 1, 1);
+  tapMarker.material.opacity = 0.9;
+  tapMarker.userData.spawn = performance.now();
+  tapMarker.userData.color = color;
+}
+
+function tickTapMarker() {
+  if (!tapMarker || !tapMarker.userData.spawn) return;
+  const age = (performance.now() - tapMarker.userData.spawn) / 1000;
+  if (age > 0.6) {
+    tapMarker.userData.spawn = 0;
+    tapMarker.material.opacity = 0;
+    return;
+  }
+  const k = age / 0.6;
+  tapMarker.scale.setScalar(1 + k * 1.4);
+  tapMarker.material.opacity = (1 - k) * 0.9;
+}
+
 function onPointerDown(e) {
   if (e.pointerType === 'mouse' && e.button !== 0) return;
   if (_isPinching || _isPanning) return;
@@ -3704,8 +3737,11 @@ function onPointerDown(e) {
       if (approach) {
         state.path = approach.path;
         state.pendingItem = it;
+        const [tx, ty] = approach.target;
+        spawnTapMarker(tx, ty, 0x7dc99a);
       } else {
         toast("J'peux pas y aller.");
+        spawnTapMarker(it.x, it.y, 0xe06b6b);
       }
       return;
     }
@@ -3722,7 +3758,12 @@ function onPointerDown(e) {
       if (path && path.length) {
         state.path = path;
         state.pendingItem = null;
+        spawnTapMarker(tx, ty, 0x4ac0e8);
+      } else {
+        spawnTapMarker(tx, ty, 0xe06b6b);
       }
+    } else {
+      spawnTapMarker(tx, ty, 0xe06b6b);
     }
   }
 }
@@ -3785,8 +3826,9 @@ function hasTrait(id) {
 
 function tick(dt) {
   const isNight = state.timeMin / 60 >= 21 || state.timeMin / 60 < 7;
+  const diffMul = state.difficulty === 'casual' ? 0.5 : 1.0;
   for (const k of NEED_KEYS) {
-    let rate = DECAY[k];
+    let rate = DECAY[k] * diffMul;
     if (hasTrait('minimaliste')) rate *= 0.7;
     if (hasTrait('sportif') && k === 'energy') rate *= 0.7;
     if (hasTrait('casanier') && (k === 'social' || k === 'fun')) rate *= 0.5;
@@ -3884,6 +3926,7 @@ function tick(dt) {
   tickPedestrians(dt);
   tickBicycles(dt);
   tickTrafficLight(dt);
+  tickTapMarker();
   ensureUmbrellas();
   checkAchievements();
 
@@ -4482,8 +4525,18 @@ startBtn.addEventListener('click', () => {
   const name = nameInput.value.trim() || 'Toi';
   state = defaultState(name);
   state.appearance = { ...pendingAppearance };
+  state.difficulty = pendingDifficulty;
   saveGame();
   startGame();
+});
+
+document.querySelectorAll('.swatches[data-picker="difficulty"] .swatch').forEach(s => {
+  s.addEventListener('click', () => {
+    pendingDifficulty = s.dataset.value;
+    document.querySelectorAll('.swatches[data-picker="difficulty"] .swatch').forEach(b => {
+      b.classList.toggle('selected', b.dataset.value === pendingDifficulty);
+    });
+  });
 });
 continueBtn.addEventListener('click', () => {
   if (saved) applyLoaded(saved);
