@@ -3672,6 +3672,7 @@ function onPointerDown(e) {
             }
           }
           rebuildPlacedItems();
+          updateOnboarding();
           toast(`Démoli · +$${refund}`);
           saveGame();
         }
@@ -3750,6 +3751,7 @@ function tryPlace(tx, ty) {
   state.placed.push(placed);
   rebuildPlacedItems();
   toast(`${def.name} posé`);
+  updateOnboarding();
   saveGame();
 }
 
@@ -4128,18 +4130,27 @@ document.querySelectorAll('.action-btn').forEach(btn => {
   });
 });
 
+let _catalogTab = 'essential';
 function openBuildCatalog() {
   const m = document.getElementById('modal');
   document.getElementById('modal-title').textContent = '🔨 Catalogue';
   const body = document.getElementById('modal-body');
   body.innerHTML = `
     <div style="font-size:12px;color:var(--ink-soft);margin-bottom:10px">Argent: <strong style="color:var(--accent)">$${Math.floor(state.money)}</strong></div>
+    <div class="catalog-tabs">
+      <button class="catalog-tab ${_catalogTab === 'essential' ? 'active' : ''}" data-tab="essential">📦 Essentiels</button>
+      <button class="catalog-tab ${_catalogTab === 'deco' ? 'active' : ''}" data-tab="deco">🎨 Décoration</button>
+    </div>
     <button id="demolish-btn" style="width:100%;padding:10px;border-radius:10px;background:var(--bad);color:#fff;font-weight:600;font-size:13px;margin-bottom:14px">🔥 Démolir (refund 50%)</button>
-    <div style="font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.6px;margin:6px 0 8px;font-weight:700">Essentiels</div>
-    <div class="catalog cat-essential"></div>
-    <div style="font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.6px;margin:14px 0 8px;font-weight:700">Décoration</div>
-    <div class="catalog cat-deco"></div>
+    <div class="catalog cat-essential" ${_catalogTab !== 'essential' ? 'hidden' : ''}></div>
+    <div class="catalog cat-deco" ${_catalogTab !== 'deco' ? 'hidden' : ''}></div>
   `;
+  body.querySelectorAll('.catalog-tab').forEach(t => {
+    t.addEventListener('click', () => {
+      _catalogTab = t.dataset.tab;
+      openBuildCatalog();
+    });
+  });
   const essentialList = body.querySelector('.cat-essential');
   const decoList = body.querySelector('.cat-deco');
   for (const it of BUILD_CATALOG) {
@@ -4506,7 +4517,9 @@ function startGame() {
   if (!state.weather) state.weather = rollWeather();
   updateQuestsBadge();
   document.getElementById('quests-fab')?.addEventListener('click', openQuests);
+  document.getElementById('onboarding-buy')?.addEventListener('click', openBuildCatalog);
   showWeatherBadge();
+  updateOnboarding();
   requestAnimationFrame(loop);
   if (state.tutorial) {
     setTimeout(() => toast(`👋 Bienvenue ${state.name} ! Ta maison est vide — tape 🔨 Construire pour acheter ton mobilier.`, 6000), 600);
@@ -4514,6 +4527,21 @@ function startGame() {
     setTimeout(() => toast(`📱 Tape Tél. pour ouvrir ton smartphone (banque, livraison, amis)`, 5000), 13000);
     setTimeout(() => { state.tutorial = false; saveGame(); }, 19000);
   }
+}
+
+function updateOnboarding() {
+  const ob = document.getElementById('onboarding');
+  if (!ob) return;
+  const essentials = ['bed', 'fridge', 'shower', 'toilet'];
+  const placedTypes = new Set((state.placed || []).map(p => p.type));
+  let allDone = true;
+  for (const type of essentials) {
+    const li = ob.querySelector(`li[data-need="${type}"]`);
+    if (!li) continue;
+    if (placedTypes.has(type)) li.classList.add('done');
+    else { li.classList.remove('done'); allDone = false; }
+  }
+  ob.hidden = allDone;
 }
 
 function showWeatherBadge() {
