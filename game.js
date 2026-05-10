@@ -363,6 +363,33 @@ const APPEARANCE_PALETTES = {
   shoeColor: ['#1a1a1a', '#5c3d1e', '#ffffff', '#a85b5b', '#3c5c8a'],
 };
 
+const WEATHERS = [
+  { id: 'sunny', label: '☀️ Ensoleillé', moodFun: 5, moodEnergy: 3 },
+  { id: 'cloudy', label: '⛅ Nuageux', moodFun: 0, moodEnergy: 0 },
+  { id: 'rainy', label: '🌧 Pluvieux', moodFun: -3, moodEnergy: -2 },
+  { id: 'snowy', label: '❄️ Neige', moodFun: 4, moodEnergy: -2 },
+  { id: 'storm', label: '⛈ Orage', moodFun: -5, moodEnergy: -4 },
+];
+
+const ACHIEVEMENTS = [
+  { id: 'first_buy', icon: '🛒', label: '1er achat', cond: s => (s.placed?.length || 0) >= 1 },
+  { id: 'fully_furnished', icon: '🏡', label: 'Appart meublé', cond: s => (s.placed?.length || 0) >= 10 },
+  { id: 'rich', icon: '💰', label: 'Premier $1000', cond: s => s.money >= 1000 },
+  { id: 'super_rich', icon: '💎', label: '$5000', cond: s => s.money >= 5000 },
+  { id: 'cook_master', icon: '👨‍🍳', label: 'Chef niv.5', cond: s => Math.floor((s.skills?.cooking || 0) / 100) >= 5 },
+  { id: 'fit', icon: '💪', label: 'Sportif niv.5', cond: s => Math.floor((s.skills?.fitness || 0) / 100) >= 5 },
+  { id: 'social_star', icon: '🌟', label: 'Star sociale', cond: s => Math.floor((s.skills?.charisma || 0) / 100) >= 5 },
+  { id: 'big_brain', icon: '🧠', label: 'Cerveau', cond: s => Math.floor((s.skills?.logic || 0) / 100) >= 5 },
+  { id: 'artist', icon: '🎨', label: 'Artiste', cond: s => Math.floor((s.skills?.art || 0) / 100) >= 5 },
+  { id: 'musician', icon: '🎵', label: 'Musicien', cond: s => Math.floor((s.skills?.music || 0) / 100) >= 5 },
+  { id: 'survivor', icon: '🌅', label: 'Jour 7', cond: s => s.day >= 7 },
+  { id: 'veteran', icon: '🏆', label: 'Jour 30', cond: s => s.day >= 30 },
+  { id: 'ceo', icon: '👔', label: 'CEO', cond: s => careerLevel(s.careerXp) >= 7 },
+  { id: 'all_traits', icon: '🎭', label: '2 traits', cond: s => (s.appearance?.traits?.length || 0) >= 2 },
+  { id: 'cat_friend', icon: '🐈', label: '50 caresses', cond: s => (s.stats?.pets || 0) >= 50 },
+  { id: 'gardener', icon: '🌿', label: 'Vert vert', cond: s => (s.stats?.plantWatered || 0) >= 20 },
+];
+
 const TRAITS = [
   { id: 'noctambule', label: '🌙 Noctambule', desc: 'Plus en forme la nuit, plus fatigué le jour' },
   { id: 'gourmand', label: '🍰 Gourmand', desc: 'Manger restaure 50% de Faim en plus' },
@@ -522,6 +549,14 @@ function defaultState(name) {
     tutorial: true,
     skills: { cooking: 0, fitness: 0, charisma: 0, logic: 0, art: 0, music: 0 },
     careerXp: 0,
+    weather: 'sunny',
+    weatherDay: 1,
+    quests: [],
+    questsDay: 0,
+    achievements: [],
+    bank: 0,
+    stats: { pets: 0, plantWatered: 0, callsMade: 0, mealsCooked: 0 },
+    friends: [],
   };
 }
 
@@ -550,6 +585,14 @@ function saveGame() {
     tutorial: state.tutorial,
     skills: state.skills,
     careerXp: state.careerXp,
+    weather: state.weather,
+    weatherDay: state.weatherDay,
+    quests: state.quests,
+    questsDay: state.questsDay,
+    achievements: state.achievements,
+    bank: state.bank,
+    stats: state.stats,
+    friends: state.friends,
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(snap)); } catch {}
 }
@@ -565,6 +608,14 @@ function applyLoaded(s) {
   state.tutorial = s.tutorial === true ? true : false;
   state.skills = { ...state.skills, ...(s.skills || {}) };
   state.careerXp = s.careerXp || 0;
+  state.weather = s.weather || 'sunny';
+  state.weatherDay = s.weatherDay || 1;
+  state.quests = Array.isArray(s.quests) ? s.quests : [];
+  state.questsDay = s.questsDay || 0;
+  state.achievements = Array.isArray(s.achievements) ? s.achievements : [];
+  state.bank = s.bank || 0;
+  state.stats = { ...state.stats, ...(s.stats || {}) };
+  state.friends = Array.isArray(s.friends) ? s.friends : [];
   if (s.player) {
     if (isWalkable(s.player.x, s.player.y)) {
       state.player.x = s.player.x;
@@ -1247,6 +1298,268 @@ function chatVisitor() {
 
 let lastEventDay = 0;
 let lastBillDay = 0;
+let lastWeatherDay = 0;
+let lastQuestsDay = 0;
+let rainParticles = null;
+let snowParticles = null;
+
+const FRIEND_NAMES = ['Léo', 'Mia', 'Ali', 'Zoé', 'Yann', 'Léa', 'Tom', 'Inès', 'Max', 'Eva'];
+const QUEST_TEMPLATES = [
+  { id: 'cook', label: '🍳 Cuisiner 2 fois', target: 2, key: 'mealsCooked', reward: 60 },
+  { id: 'work', label: '💼 Aller au travail', target: 1, key: 'workSessions', reward: 80 },
+  { id: 'pets', label: '🐈 Caresser le chat 3x', target: 3, key: 'pets', reward: 40 },
+  { id: 'plant', label: '🌱 Arroser plante 2x', target: 2, key: 'plantWatered', reward: 30 },
+  { id: 'social', label: '💬 Faire 2 appels', target: 2, key: 'callsMade', reward: 50 },
+  { id: 'tv', label: '📺 Regarder la télé', target: 1, key: 'tvWatched', reward: 25 },
+  { id: 'shower', label: '🚿 Se laver 2x', target: 2, key: 'showers', reward: 30 },
+  { id: 'workout', label: '💪 Faire du sport', target: 1, key: 'workouts', reward: 50 },
+  { id: 'spend', label: '💸 Dépenser $200', target: 200, key: 'spent', reward: 80 },
+];
+
+function rollWeather() {
+  const r = Math.random();
+  if (r < 0.45) return 'sunny';
+  if (r < 0.7) return 'cloudy';
+  if (r < 0.85) return 'rainy';
+  if (r < 0.95) return 'snowy';
+  return 'storm';
+}
+
+function applyWeatherDailyMood() {
+  const w = WEATHERS.find(w => w.id === state.weather);
+  if (!w) return;
+  state.needs.fun = Math.max(0, Math.min(100, state.needs.fun + w.moodFun));
+  state.needs.energy = Math.max(0, Math.min(100, state.needs.energy + w.moodEnergy));
+}
+
+function ensureWeatherParticles() {
+  if (state.weather === 'rainy' || state.weather === 'storm') {
+    if (snowParticles) snowParticles.visible = false;
+    if (!rainParticles) {
+      const count = 600;
+      const geom = new THREE.BufferGeometry();
+      const pos = new Float32Array(count * 3);
+      for (let i = 0; i < count; i++) {
+        pos[i * 3] = (Math.random() - 0.5) * 30 + COLS / 2;
+        pos[i * 3 + 1] = Math.random() * 18;
+        pos[i * 3 + 2] = (Math.random() - 0.5) * 30 + APT_ROWS / 2;
+      }
+      geom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const mat = new THREE.PointsMaterial({
+        color: 0xa0c8e8, size: 0.12, transparent: true, opacity: 0.7,
+        depthWrite: false, sizeAttenuation: true,
+      });
+      rainParticles = new THREE.Points(geom, mat);
+      scene.add(rainParticles);
+    }
+    rainParticles.visible = true;
+  } else if (state.weather === 'snowy') {
+    if (rainParticles) rainParticles.visible = false;
+    if (!snowParticles) {
+      const count = 350;
+      const geom = new THREE.BufferGeometry();
+      const pos = new Float32Array(count * 3);
+      const drift = new Float32Array(count * 3);
+      for (let i = 0; i < count; i++) {
+        pos[i * 3] = (Math.random() - 0.5) * 30 + COLS / 2;
+        pos[i * 3 + 1] = Math.random() * 18;
+        pos[i * 3 + 2] = (Math.random() - 0.5) * 30 + APT_ROWS / 2;
+        drift[i * 3] = (Math.random() - 0.5) * 0.3;
+        drift[i * 3 + 2] = (Math.random() - 0.5) * 0.3;
+      }
+      geom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const mat = new THREE.PointsMaterial({
+        color: 0xffffff, size: 0.18, transparent: true, opacity: 0.85,
+        depthWrite: false, sizeAttenuation: true,
+      });
+      snowParticles = new THREE.Points(geom, mat);
+      snowParticles.userData.drift = drift;
+      scene.add(snowParticles);
+    }
+    snowParticles.visible = true;
+  } else {
+    if (rainParticles) rainParticles.visible = false;
+    if (snowParticles) snowParticles.visible = false;
+  }
+}
+
+function tickWeatherParticles(dt) {
+  if (rainParticles && rainParticles.visible) {
+    const pos = rainParticles.geometry.attributes.position.array;
+    for (let i = 0; i < pos.length; i += 3) {
+      pos[i + 1] -= 12 * dt;
+      if (pos[i + 1] < 0) {
+        pos[i] = (Math.random() - 0.5) * 30 + COLS / 2;
+        pos[i + 1] = 18;
+        pos[i + 2] = (Math.random() - 0.5) * 30 + APT_ROWS / 2;
+      }
+    }
+    rainParticles.geometry.attributes.position.needsUpdate = true;
+  }
+  if (snowParticles && snowParticles.visible) {
+    const pos = snowParticles.geometry.attributes.position.array;
+    const drift = snowParticles.userData.drift;
+    for (let i = 0; i < pos.length; i += 3) {
+      pos[i] += drift[i] * dt;
+      pos[i + 1] -= 1.5 * dt;
+      pos[i + 2] += drift[i + 2] * dt;
+      if (pos[i + 1] < 0) {
+        pos[i] = (Math.random() - 0.5) * 30 + COLS / 2;
+        pos[i + 1] = 18;
+        pos[i + 2] = (Math.random() - 0.5) * 30 + APT_ROWS / 2;
+      }
+    }
+    snowParticles.geometry.attributes.position.needsUpdate = true;
+  }
+}
+
+function generateQuests() {
+  const pool = [...QUEST_TEMPLATES];
+  pool.sort(() => Math.random() - 0.5);
+  state.quests = pool.slice(0, 3).map(q => ({ ...q, progress: 0, done: false, claimed: false }));
+}
+
+function bumpQuestStat(key, amount = 1) {
+  state.stats[key] = (state.stats[key] || 0) + amount;
+  for (const q of state.quests) {
+    if (q.done) continue;
+    if (q.key === key) {
+      q.progress = Math.min(q.target, q.progress + amount);
+      if (q.progress >= q.target) {
+        q.done = true;
+        toast(`✅ Quête : ${q.label}`, 2500);
+        playSfx('levelup');
+      }
+    }
+  }
+  updateQuestsBadge();
+}
+
+function updateQuestsBadge() {
+  const remaining = state.quests.filter(q => !q.done).length;
+  const fab = document.getElementById('quests-fab');
+  const count = document.getElementById('quests-count');
+  if (count) count.textContent = remaining || '✓';
+  if (fab) fab.style.display = state.quests.length ? 'flex' : 'none';
+}
+
+function checkAchievements() {
+  for (const ach of ACHIEVEMENTS) {
+    if (state.achievements.includes(ach.id)) continue;
+    if (ach.cond(state)) {
+      state.achievements.push(ach.id);
+      toast(`🏆 ${ach.icon} ${ach.label}`, 3500);
+      playSfx('levelup');
+    }
+  }
+}
+
+function openPhone() {
+  const m = document.getElementById('modal');
+  document.getElementById('modal-title').textContent = '📱 Téléphone';
+  const body = document.getElementById('modal-body');
+  body.innerHTML = `
+    <div class="phone-app">
+      <h3>💰 Banque</h3>
+      <div class="app-row"><span>Compte courant</span><strong style="color:var(--accent)">$${Math.floor(state.money)}</strong></div>
+      <div class="app-row"><span>Épargne (+2%/jour)</span><strong style="color:var(--good)">$${Math.floor(state.bank)}</strong></div>
+      <div class="app-row" style="gap:8px;justify-content:flex-end">
+        <button data-bank="50">+ Dépose $50</button>
+        <button data-bank="-50">Retire $50</button>
+      </div>
+    </div>
+    <div class="phone-app">
+      <h3>🍕 Livraison</h3>
+      <div class="app-row"><span>🍔 Burger ($15)</span><button data-deliver="burger" data-price="15">Cmd</button></div>
+      <div class="app-row"><span>🍕 Pizza ($25)</span><button data-deliver="pizza" data-price="25">Cmd</button></div>
+      <div class="app-row"><span>🍣 Sushi ($40)</span><button data-deliver="sushi" data-price="40">Cmd</button></div>
+    </div>
+    <div class="phone-app">
+      <h3>💬 Amis</h3>
+      ${(state.friends.length ? state.friends : (state.friends = pickFriends()))
+        .map(f => `<div class="app-row"><span>${f.emoji} ${f.name}</span><button data-chat="${f.name}">Discuter</button></div>`).join('')}
+    </div>
+    <div class="phone-app">
+      <h3>🏆 Trophées (${state.achievements.length}/${ACHIEVEMENTS.length})</h3>
+      <div class="achievements-grid">
+        ${ACHIEVEMENTS.map(ach => `<div class="achievement ${state.achievements.includes(ach.id) ? 'unlocked' : ''}" title="${ach.label}">${ach.icon}</div>`).join('')}
+      </div>
+    </div>
+  `;
+  body.querySelectorAll('[data-bank]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const v = parseInt(btn.dataset.bank, 10);
+      if (v > 0) {
+        if (state.money < v) { toast("Pas assez d'argent."); return; }
+        state.money -= v; state.bank += v;
+      } else if (v < 0) {
+        if (state.bank < -v) { toast('Épargne vide.'); return; }
+        state.bank += v; state.money -= v;
+      }
+      saveGame(); openPhone(); playSfx('money');
+    });
+  });
+  body.querySelectorAll('[data-deliver]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const price = parseInt(btn.dataset.price, 10);
+      if (state.money < price) { toast("Pas assez d'argent."); return; }
+      state.money -= price;
+      state.needs.hunger = Math.min(100, state.needs.hunger + (price * 1.8));
+      state.needs.fun = Math.min(100, state.needs.fun + 6);
+      bumpQuestStat('spent', price);
+      toast(`✅ ${btn.dataset.deliver} livré !`, 2200);
+      spawnEmote('🍽');
+      playSfx('success');
+      m.hidden = true;
+    });
+  });
+  body.querySelectorAll('[data-chat]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.needs.social = Math.min(100, state.needs.social + 18);
+      state.needs.fun = Math.min(100, state.needs.fun + 8);
+      bumpQuestStat('callsMade');
+      toast(`💬 Belle discussion avec ${btn.dataset.chat}`, 2200);
+      playSfx('pet');
+      m.hidden = true;
+    });
+  });
+  m.hidden = false;
+}
+
+function pickFriends() {
+  const emojis = ['🧑', '👩', '👨', '🧑‍🦰', '👱', '🧔', '👵', '🧓'];
+  const arr = [...FRIEND_NAMES].sort(() => Math.random() - 0.5).slice(0, 4);
+  return arr.map(name => ({ name, emoji: emojis[Math.floor(Math.random() * emojis.length)] }));
+}
+
+function openQuests() {
+  const m = document.getElementById('modal');
+  document.getElementById('modal-title').textContent = '📋 Quêtes du jour';
+  const body = document.getElementById('modal-body');
+  if (!state.quests.length) generateQuests();
+  body.innerHTML = state.quests.map(q => `
+    <div class="quest-item ${q.done ? 'done' : ''}">
+      <span>${q.label}</span>
+      <span class="quest-reward">${q.progress}/${q.target} · +$${q.reward}</span>
+    </div>
+  `).join('') + (state.quests.every(q => q.done && !q.claimed) ? `
+    <button id="claim-quests" style="width:100%;padding:12px;border-radius:12px;background:var(--grad-accent);color:var(--bg-deep);font-weight:700;font-size:14px;margin-top:12px;box-shadow:0 4px 14px rgba(244,184,96,0.3)">Récupérer ${state.quests.reduce((s, q) => s + q.reward, 0)}$</button>
+  ` : '');
+  const claim = document.getElementById('claim-quests');
+  if (claim) claim.addEventListener('click', () => {
+    const total = state.quests.reduce((s, q) => s + q.reward, 0);
+    state.money += total;
+    state.quests.forEach(q => q.claimed = true);
+    state.quests = [];
+    toast(`💰 +$${total} récompense quêtes !`, 3000);
+    playSfx('money');
+    m.hidden = true;
+    updateQuestsBadge();
+    saveGame();
+  });
+  m.hidden = false;
+}
+
 function checkRandomEvents() {
   const t = state.timeMin / 60;
   if (state.day > lastBillDay && state.day % 3 === 0 && t >= 9 && t < 9.5) {
@@ -1995,6 +2308,7 @@ function petCat() {
   spawnEmote('💖');
   toast('Tu caresses le chat', 1500);
   playSfx('pet');
+  bumpQuestStat('pets');
 }
 
 function ensureAudio() {
@@ -2573,6 +2887,13 @@ function tick(dt) {
   while (state.timeMin >= DAY_MIN) {
     state.timeMin -= DAY_MIN;
     state.day++;
+    state.weather = rollWeather();
+    applyWeatherDailyMood();
+    state.bank = Math.floor(state.bank * 1.02);
+    generateQuests();
+    updateQuestsBadge();
+    showWeatherBadge();
+    toast(`📅 Jour ${state.day} · ${WEATHERS.find(w => w.id === state.weather).label}`, 3500);
   }
 
   if (state.path && state.path.length && !state.action) {
@@ -2641,6 +2962,9 @@ function tick(dt) {
   tickActionParticles(dt);
   tickVisitor(dt);
   checkRandomEvents();
+  ensureWeatherParticles();
+  tickWeatherParticles(dt);
+  checkAchievements();
 
   saveAccum += dt;
   if (saveAccum > 8) { saveAccum = 0; saveGame(); }
@@ -2781,7 +3105,14 @@ function finishAction() {
     state.careerXp += 25;
     const lvlAfter = careerLevel(state.careerXp);
     if (lvlAfter > lvlBefore) { toast(`🎉 Promotion ! ${CAREER_TITLES[lvlAfter - 1]}`, 3500); playSfx('levelup'); }
+    bumpQuestStat('workSessions');
   }
+  if (a.key === 'cook') bumpQuestStat('mealsCooked');
+  if (a.key === 'plant') bumpQuestStat('plantWatered');
+  if (a.key === 'call') bumpQuestStat('callsMade');
+  if (a.key === 'tv') bumpQuestStat('tvWatched');
+  if (a.key === 'shower') bumpQuestStat('showers');
+  if (a.key === 'workout') bumpQuestStat('workouts');
   toast(a.def.label + ' ✓');
   spawnEmote(emoteFor(a.key));
   playSfx(a.def.money > 0 ? 'money' : 'success');
@@ -2855,6 +3186,7 @@ document.querySelectorAll('.action-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const quick = btn.dataset.quick;
     if (quick === 'build') { openBuildCatalog(); return; }
+    if (quick === 'phone') { openPhone(); return; }
     if (state.action) return;
     if (quick === 'call') startAction('call', null);
     if (quick === 'sleep') {
@@ -3239,12 +3571,29 @@ function startGame() {
   gameEl.hidden = false;
   init3D();
   updateHUD();
+  if (!state.quests || state.quests.length === 0) generateQuests();
+  if (!state.weather) state.weather = rollWeather();
+  updateQuestsBadge();
+  document.getElementById('quests-fab')?.addEventListener('click', openQuests);
+  showWeatherBadge();
   requestAnimationFrame(loop);
   if (state.tutorial) {
     setTimeout(() => toast(`👋 Bienvenue ${state.name} ! Ton appart est vide — tape 🔨 Construire pour acheter ton mobilier.`, 6000), 600);
     setTimeout(() => toast(`💡 Achète au minimum un Lit, un Frigo, des WC et une Douche.`, 5000), 7500);
-    setTimeout(() => { state.tutorial = false; saveGame(); }, 13000);
+    setTimeout(() => toast(`📱 Tape Tél. pour ouvrir ton smartphone (banque, livraison, amis)`, 5000), 13000);
+    setTimeout(() => { state.tutorial = false; saveGame(); }, 19000);
   }
+}
+
+function showWeatherBadge() {
+  let el = document.querySelector('.weather-badge');
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'weather-badge';
+    document.body.appendChild(el);
+  }
+  const w = WEATHERS.find(w => w.id === state.weather);
+  el.textContent = w ? w.label : '';
 }
 
 document.addEventListener('visibilitychange', () => { if (document.hidden) saveGame(); });
