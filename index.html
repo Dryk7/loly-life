@@ -33,7 +33,7 @@
       <label>Prénom</label>
       <input id="name-input" type="text" maxlength="14" placeholder="Ton prénom" autocomplete="off" value="">
 
-      <h3 class="picker-section">👤 Identité</h3>
+      <h3 class="picker-section">Identité</h3>
       <div class="picker-row">
         <span class="picker-label">Genre</span>
         <div class="swatches text" data-picker="gender"></div>
@@ -47,7 +47,7 @@
         <div class="swatches text" data-picker="bodyShape"></div>
       </div>
 
-      <h3 class="picker-section">🎨 Visage</h3>
+      <h3 class="picker-section">Visage</h3>
       <div class="picker-row">
         <span class="picker-label">Peau</span>
         <div class="swatches" data-picker="skin"></div>
@@ -69,7 +69,7 @@
         <div class="swatches text" data-picker="glasses"></div>
       </div>
 
-      <h3 class="picker-section">💇 Cheveux</h3>
+      <h3 class="picker-section">Cheveux</h3>
       <div class="picker-row">
         <span class="picker-label">Couleur</span>
         <div class="swatches" data-picker="hair"></div>
@@ -87,7 +87,7 @@
         <div class="swatches text" data-picker="earring"></div>
       </div>
 
-      <h3 class="picker-section">👕 Tenue</h3>
+      <h3 class="picker-section">Tenue</h3>
       <div class="picker-row">
         <span class="picker-label">Haut</span>
         <div class="swatches text" data-picker="top"></div>
@@ -113,10 +113,10 @@
         <div class="swatches" data-picker="shoeColor"></div>
       </div>
 
-      <h3 class="picker-section">⭐ Personnalité <small>(2 max)</small></h3>
+      <h3 class="picker-section">Personnalité <small>(2 max)</small></h3>
       <div id="traits-picker" class="traits-list"></div>
 
-      <h3 class="picker-section">🎮 Difficulté</h3>
+      <h3 class="picker-section">Difficulté</h3>
       <div class="picker-row">
         <span class="picker-label">Mode</span>
         <div class="swatches text" data-picker="difficulty">
@@ -136,11 +136,11 @@
   <div id="game" hidden>
     <header id="hud-top">
       <div class="needs">
-        <div class="need" data-need="hunger"><span class="need-icon">🍽</span><div class="bar"><div class="fill"></div></div></div>
-        <div class="need" data-need="energy"><span class="need-icon">⚡</span><div class="bar"><div class="fill"></div></div></div>
-        <div class="need" data-need="hygiene"><span class="need-icon">🚿</span><div class="bar"><div class="fill"></div></div></div>
-        <div class="need" data-need="social"><span class="need-icon">💬</span><div class="bar"><div class="fill"></div></div></div>
-        <div class="need" data-need="fun"><span class="need-icon">🎉</span><div class="bar"><div class="fill"></div></div></div>
+        <div class="need" data-need="hunger" aria-label="Faim"><span class="need-icon"></span><div class="bar"><div class="fill"></div></div></div>
+        <div class="need" data-need="energy" aria-label="Énergie"><span class="need-icon"></span><div class="bar"><div class="fill"></div></div></div>
+        <div class="need" data-need="hygiene" aria-label="Hygiène"><span class="need-icon"></span><div class="bar"><div class="fill"></div></div></div>
+        <div class="need" data-need="social" aria-label="Social"><span class="need-icon"></span><div class="bar"><div class="fill"></div></div></div>
+        <div class="need" data-need="fun" aria-label="Fun"><span class="need-icon"></span><div class="bar"><div class="fill"></div></div></div>
       </div>
       <div class="hud-row">
         <div class="chip" id="chip-money">$0</div>
@@ -160,9 +160,9 @@
     </main>
 
     <footer id="hud-bottom">
-      <button class="action-btn" data-quick="build">🔨 Construire</button>
-      <button class="action-btn" data-quick="phone">📱 Tél.</button>
-      <button class="action-btn" data-quick="sleep">😴 Dormir</button>
+      <button class="action-btn" data-quick="build"><span class="btn-icon ic-hammer"></span>Construire</button>
+      <button class="action-btn" data-quick="phone"><span class="btn-icon ic-phone"></span>Téléphone</button>
+      <button class="action-btn" data-quick="sleep"><span class="btn-icon ic-moon"></span>Dormir</button>
     </footer>
 
     <button id="quests-fab" class="fab" aria-label="Quêtes du jour">📋 <span id="quests-count">3</span></button>
